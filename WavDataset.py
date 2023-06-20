@@ -1,7 +1,7 @@
 import torch
 import json
 from torch.utils.data import Dataset, DataLoader
-from spectrogram import get_spectrogram
+from spectrogram import get_spectrogram , get_mel_spectrogram
 from scipy.io import wavfile
 from utils import alphabet
 
@@ -13,9 +13,12 @@ class WavDataSet(Dataset):
         with open(folder+labels_file) as file:
             i= 0
             for line in file:
-                self.train_data.append(json.loads(line))
+                json_line = json.loads(line)
+                if float(json_line["duration"]) > 3:
+                    continue
+                self.train_data.append(json_line)
                 i+=1
-                if i >=128:
+                if i >=10024:
                     break
         #self.train_data = self.train_data[1:2]
     def __len__(self):
@@ -23,7 +26,7 @@ class WavDataSet(Dataset):
 
     def __getitem__(self, idx):
 
-        split_size = 6
+        split_size = 2
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
@@ -39,7 +42,11 @@ class WavDataSet(Dataset):
             sequence = sequence[:-1]
 
         sequence =torch.stack(sequence)
-        sequence = torch.nn.functional.normalize(sequence,dim=0)
+        #standarize
+        l = sequence.min()
+        sequence -=sequence.min()
+        sequence /= sequence.max()
+        assert sequence.isnan().any().item() == 0
         target = torch.tensor([alphabet[i] for i in self.train_data[idx]["text"]])
 
         return sequence, target
