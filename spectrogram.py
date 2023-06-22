@@ -4,7 +4,7 @@ import scipy
 def get_spectrogram(samples, freq, step=256):
     spectrogram = []
 
-    for i in range(0, samples.size + 1, step):
+    for i in range(0, samples.size + 1, int(step//1.7)):
         segment = samples[i: i + step]
         if segment.size != step:
             break
@@ -46,6 +46,6 @@ def get_mel_spectrogram(samples, freq, filters_count=30, lower=80, upper=8000, s
 
 
     mel_spectrogram = 10 * np.log10(np.abs(scipy.fft.dct(result,type=2)))
-    mel_spectrogram = np.where(mel_spectrogram < -100, 0.01, mel_spectrogram)
+    mel_spectrogram = np.where(mel_spectrogram < -100, 0.01, mel_spectrogram)[:,2:20]
 
     return mel_spectrogram

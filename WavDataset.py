@@ -14,11 +14,11 @@ class WavDataSet(Dataset):
             i= 0
             for line in file:
                 json_line = json.loads(line)
-                if float(json_line["duration"]) > 3:
+                if float(json_line["duration"]) > 7 or float(json_line["duration"]) < 1:
                     continue
                 self.train_data.append(json_line)
                 i+=1
-                if i >=10024:
+                if i >=5824:
                     break
         #self.train_data = self.train_data[1:2]
     def __len__(self):
@@ -26,7 +26,7 @@ class WavDataSet(Dataset):
 
     def __getitem__(self, idx):
 
-        split_size = 2
+        split_size = 9
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
@@ -34,7 +34,7 @@ class WavDataSet(Dataset):
 
         freq, samp = wavfile.read(self.folder + file, "r")
 
-        spectrogram = torch.tensor(get_spectrogram(samp, freq))
+        spectrogram = torch.tensor(get_mel_spectrogram(samp, freq))
 
         sequence = torch.split(spectrogram, split_size)
 
@@ -46,6 +46,7 @@ class WavDataSet(Dataset):
         l = sequence.min()
         sequence -=sequence.min()
         sequence /= sequence.max()
+        sequence = sequence.reshape(-1,18*split_size)
         assert sequence.isnan().any().item() == 0
         target = torch.tensor([alphabet[i] for i in self.train_data[idx]["text"]])
 
