@@ -4,8 +4,9 @@ import scipy
 def get_spectrogram(samples, freq, step=256):
     spectrogram = []
 
-    for i in range(0, samples.size + 1, int(step//1)):
-        segment = samples[i: i + step]
+    for i in range(0, samples.size + 1, int(step//2)):
+        segment = np.array(samples[i: i + step],dtype=np.float64)
+        segment *= np.hamming(segment.shape[0])
         if segment.size != step:
             break
         segment = np.fft.fft(segment)
@@ -17,7 +18,7 @@ def get_spectrogram(samples, freq, step=256):
     return spectrogram
 
 
-def get_mel_spectrogram(samples, freq, filters_count=30, lower=300, upper=8000, step=256):
+def get_mel_spectrogram(samples, freq, filters_count=30, lower=50, upper=8000, step=512):
     # Createion of filters
     lower_mel = 1125 * np.log(1 + lower / 700)
     upper_mel = 1125 * np.log(1 + upper / 700)
@@ -37,15 +38,16 @@ def get_mel_spectrogram(samples, freq, filters_count=30, lower=300, upper=8000, 
         filters[i-1] = cur
 
     # Applying filters to spectrogram
-    amplitudes = get_spectrogram(samples, freq, step)
+    amplitudes = get_spectrogram(samples, freq, step=step)
     amplitudes = np.where(amplitudes < -100, 0, amplitudes)
     result = np.zeros((amplitudes.shape[0], filters_count))
 
     for i in range(amplitudes.shape[0]):
-        result[i] = np.log(np.sum(amplitudes[i] ** 2 * filters, axis=1)+1)
+        result[i] = np.log(np.square(np.sum(amplitudes[i] ** 2 * filters, axis=1))+1)
 
 
-    mel_spectrogram = 10 * np.log10(np.abs(scipy.fft.dct(result,type=2)))
-    mel_spectrogram = np.where(mel_spectrogram < -100, 0.01, mel_spectrogram)[:,0:29]
+    mel_spectrogram = scipy.fft.dct(result,type=2)
+    mel_spectrogram = np.where(mel_spectrogram < -100, 0.01, mel_spectrogram)[:,0:12]
 
     return mel_spectrogram
+

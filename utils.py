@@ -15,3 +15,4 @@ def decode_result(nn_output):
     result = "".join([c for c , k in itertools.groupby(text)]).replace("-","")
     print(result, len(text))
     return best_symbols
+

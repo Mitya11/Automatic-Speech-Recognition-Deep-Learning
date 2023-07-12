@@ -5,8 +5,8 @@ class ASR(torch.nn.Module):
     def __init__(self):
         super(ASR, self).__init__()
 
-        self.rnn = torch.nn.LSTM(3*29, 256, 4, dropout=0.2,bidirectional=True)
-        self.linear = torch.nn.Linear(512, 34)
+        self.rnn = torch.nn.LSTM(2*28, 58, 2, dropout=0.2,bidirectional=True)
+        self.linear = torch.nn.Linear(116, 34)
 
     def forward(self, x):
         x = x.cuda()
@@ -17,7 +17,7 @@ class ASR(torch.nn.Module):
         return output
 
     def train(self, epochesCount, dataset,validate = None):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.0007)
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.0006)
         torch.autograd.set_detect_anomaly(True)
         for i in range(epochesCount):
             print("Epoch:", i + 1)
@@ -64,6 +64,7 @@ class ASR(torch.nn.Module):
 
                 loss = CTC(output, target, input_lengths, target_lengths)
                 sr += float(loss)
-                from utils import decode_result
+                from utils import decode_result,alphabet
                 bib = decode_result(output[:, 0:1])
+                print("                -----","".join([alphabet[i.item()] for i in target[0]]))
             print("VALIDATE Loss:", sr, "")

@@ -7,6 +7,8 @@ from utils import alphabet
 import matplotlib.pyplot as plt
 import os
 import random
+import librosa
+import numpy as np
 class WavDataSet(Dataset):
     def __init__(self, folder, labels_file="manifest.jsonl", transform=None):
         self.train_data = []
@@ -22,7 +24,7 @@ class WavDataSet(Dataset):
                     continue
                 self.train_data.append(json_line)
                 i+=1
-                if i >=80112:
+                if i >=1112:
                     break
         #self.train_data = random.sample(self.train_data,19112)
     def __len__(self):
@@ -30,7 +32,7 @@ class WavDataSet(Dataset):
 
     def __getitem__(self, idx):
 
-        split_size = 3
+        split_size = 2
         if torch.is_tensor(idx):
             idx = idx.tolist()
         if idx == 4051:
@@ -41,7 +43,13 @@ class WavDataSet(Dataset):
 
         if self.transform:
             samp = self.transform(samp)
-        spectrogram = torch.tensor(get_mel_spectrogram(samp, freq))
+        samp = np.array(samp,dtype=np.float64)
+        spectrogram = torch.tensor(librosa.feature.mfcc(y=samp,sr=16000,S=None,n_mfcc=28,n_fft=512,hop_length=256)).transpose(0,1)
+
+
+
+
+        #spectrogram = torch.tensor(get_mel_spectrogram(samp, freq))
         """plt.imshow(spectrogram.transpose(0,1), origin = "lower")
         plt.show()"""
         sequence = torch.split(spectrogram, split_size)
@@ -53,8 +61,8 @@ class WavDataSet(Dataset):
         #standarize
         l = sequence.min()
         #sequence -=sequence.min()
-        #sequence /= sequence.max()
-        sequence = sequence.reshape(-1,29*split_size)
+        #sequence /= 20
+        sequence = sequence.reshape(-1,28*split_size)
         assert sequence.isnan().any().item() == 0
         target = torch.tensor([alphabet[i] for i in self.train_data[idx]["text"]])
 

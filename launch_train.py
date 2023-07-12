@@ -20,20 +20,19 @@ def custom_collate(batch):
         target = target[:,:inputs.size()[0]-2]"""
     target_lengths = torch.where(target_lengths>=input_lengths,input_lengths-2,target_lengths)
     inputs = inputs.type(torch.float32)
-    inputs = torch.nn.BatchNorm1d(inputs.size(dim=1))(inputs)
     return inputs,target , input_lengths, target_lengths
 freq, samp = wavfile.read("WavTrain/crowd/files/1286be06c90555003cd7fd5dff85ac4d.wav","r")#Салют вызов Светлане Васильевне
 
 print(freq)
-spectrogram =get_spectrogram(samp,freq)
+spectrogram =get_spectrogram(samp,freq,512)
 print(len(spectrogram))
 #plt.imshow(spectrogram.transpose(), origin = "lower")
 #plt.show()
 
 dataset = WavDataSet(folder="WavTrain/train/",transform=RandomOffset())
 
-train = torch.utils.data.Subset(dataset, range(int(len(dataset)*0.85)))
-val = torch.utils.data.Subset(dataset, range(int(len(dataset)*0.85),len(dataset)))
+train = torch.utils.data.Subset(dataset, range(int(len(dataset)-533)))
+val = torch.utils.data.Subset(dataset, range(int(len(dataset)-533),len(dataset)))
 val.transforms = None
 train_data = torch.utils.data.DataLoader(train,batch_size=48,collate_fn=custom_collate,shuffle=True)
 val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_collate,shuffle=False)
@@ -56,17 +55,19 @@ torch.save(model.state_dict(), "ASR")
 
 spectrogram = torch.tensor(get_mel_spectrogram(samp, freq),dtype=torch.float32)
 
-sequence = torch.split(spectrogram, 3)
+sequence = torch.split(spectrogram, 2)
 
-if sequence[-1].size()[0] != 3:
+if sequence[-1].size()[0] != 2:
     sequence = sequence[:-1]
-sequence = torch.stack(sequence).cuda()
+"""sequence = torch.stack(sequence).cuda()
 
-sequence = sequence.reshape(-1, 29 * 3)
+sequence = sequence.reshape(-1, 28 * 2)
 
 sequence =torch.unsqueeze(sequence,dim=1).cpu()
 sequence = torch.nn.BatchNorm1d(1)(sequence)
+
+#237100
 result = model(sequence)
 print("Тест:")
 decode_result(torch.exp(result))
-
+"""
