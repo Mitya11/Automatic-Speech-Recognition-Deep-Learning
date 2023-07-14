@@ -5,7 +5,7 @@ class ASR(torch.nn.Module):
     def __init__(self):
         super(ASR, self).__init__()
 
-        self.rnn = torch.nn.LSTM(2*28, 58, 2, dropout=0.2,bidirectional=True)
+        self.rnn = torch.nn.LSTM(2 * 28, 58, 2, dropout=0.2, bidirectional=True)
         self.linear = torch.nn.Linear(116, 34)
 
     def forward(self, x):

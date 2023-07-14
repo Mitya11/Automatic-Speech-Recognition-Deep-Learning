@@ -7,6 +7,7 @@ from model import ASR
 import torch
 from utils import decode_result
 from transforms import RandomOffset
+from datetime import datetime
 
 #torch.set_num_threads(8)
 def custom_collate(batch):
@@ -41,8 +42,9 @@ val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_colla
 model = ASR()
 model.load_state_dict(torch.load("ASR"))
 model.cuda()
-model.train(1, train_data,val_data)
-
+start_time = datetime.now()
+model.train(2, train_data,val_data)
+#model.validate_epoch(val_data)
 try:
     1
 except:
@@ -50,6 +52,7 @@ except:
 
 torch.save(model.state_dict(), "ASR")
 
+print("Total Time: {}".format(datetime.now()-start_time))
 
 
 

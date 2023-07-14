@@ -24,7 +24,7 @@ class WavDataSet(Dataset):
                     continue
                 self.train_data.append(json_line)
                 i+=1
-                if i >=1112:
+                if i >=190112:
                     break
         #self.train_data = random.sample(self.train_data,19112)
     def __len__(self):
@@ -44,7 +44,9 @@ class WavDataSet(Dataset):
         if self.transform:
             samp = self.transform(samp)
         samp = np.array(samp,dtype=np.float64)
-        spectrogram = torch.tensor(librosa.feature.mfcc(y=samp,sr=16000,S=None,n_mfcc=28,n_fft=512,hop_length=256)).transpose(0,1)
+        n_fft = int(16000*0.02)
+        hop = n_fft//2
+        spectrogram = torch.tensor(librosa.feature.mfcc(y=samp,sr=16000,S=None,n_mfcc=28,n_fft=n_fft,hop_length=hop)).transpose(0,1)
 
 
 
