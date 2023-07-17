@@ -10,7 +10,7 @@ import random
 import librosa
 import numpy as np
 class WavDataSet(Dataset):
-    def __init__(self, folder, labels_file="manifest.jsonl", transform=None):
+    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,count = 190512):
         self.train_data = []
         self.transform = transform
         self.folder = folder
@@ -20,19 +20,19 @@ class WavDataSet(Dataset):
                 json_line = json.loads(line)
                 if not os.path.isfile(folder+json_line["audio_filepath"]):
                     continue
-                if float(json_line["duration"]) > 6 or float(json_line["duration"]) < 2:
+                if float(json_line["duration"]) > 6 or float(json_line["duration"]) < 1:
                     continue
                 self.train_data.append(json_line)
                 i+=1
-                if i >=190112:
+                if i >=count:
                     break
-        #self.train_data = random.sample(self.train_data,19112)
+        #self.train_data = self.train_data[-2500:-2]
     def __len__(self):
         return len(self.train_data)
 
     def __getitem__(self, idx):
 
-        split_size = 2
+        split_size = 1
         if torch.is_tensor(idx):
             idx = idx.tolist()
         if idx == 4051:
@@ -44,7 +44,7 @@ class WavDataSet(Dataset):
         if self.transform:
             samp = self.transform(samp)
         samp = np.array(samp,dtype=np.float64)
-        n_fft = int(16000*0.02)
+        n_fft = int(16000*0.035)
         hop = n_fft//2
         spectrogram = torch.tensor(librosa.feature.mfcc(y=samp,sr=16000,S=None,n_mfcc=28,n_fft=n_fft,hop_length=hop)).transpose(0,1)
 

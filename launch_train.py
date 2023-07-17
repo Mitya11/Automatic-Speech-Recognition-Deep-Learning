@@ -22,7 +22,7 @@ def custom_collate(batch):
     target_lengths = torch.where(target_lengths>=input_lengths,input_lengths-2,target_lengths)
     inputs = inputs.type(torch.float32)
     return inputs,target , input_lengths, target_lengths
-freq, samp = wavfile.read("WavTrain/crowd/files/1286be06c90555003cd7fd5dff85ac4d.wav","r")#Салют вызов Светлане Васильевне
+freq, samp = wavfile.read("WavTrain/crowd/files/794915d4730d7bd2870506ed5174d3ad.wav","r")#Салют вызов Светлане Васильевне
 
 print(freq)
 spectrogram =get_spectrogram(samp,freq,512)
@@ -33,8 +33,7 @@ print(len(spectrogram))
 dataset = WavDataSet(folder="WavTrain/train/",transform=RandomOffset())
 
 train = torch.utils.data.Subset(dataset, range(int(len(dataset)-533)))
-val = torch.utils.data.Subset(dataset, range(int(len(dataset)-533),len(dataset)))
-val.transforms = None
+val = WavDataSet(folder="WavTrain/crowd/",count=533)
 train_data = torch.utils.data.DataLoader(train,batch_size=48,collate_fn=custom_collate,shuffle=True)
 val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_collate,shuffle=False)
 
@@ -43,8 +42,8 @@ model = ASR()
 model.load_state_dict(torch.load("ASR"))
 model.cuda()
 start_time = datetime.now()
-model.train(2, train_data,val_data)
-#model.validate_epoch(val_data)
+#model.train(1, train_data,val_data)
+model.validate_epoch(val_data)
 try:
     1
 except:
@@ -56,13 +55,13 @@ print("Total Time: {}".format(datetime.now()-start_time))
 
 
 
-spectrogram = torch.tensor(get_mel_spectrogram(samp, freq),dtype=torch.float32)
+"""spectrogram = torch.tensor(get_mel_spectrogram(samp, freq),dtype=torch.float32)
 
 sequence = torch.split(spectrogram, 2)
 
 if sequence[-1].size()[0] != 2:
     sequence = sequence[:-1]
-"""sequence = torch.stack(sequence).cuda()
+sequence = torch.stack(sequence).cuda()
 
 sequence = sequence.reshape(-1, 28 * 2)
 

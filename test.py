@@ -18,15 +18,16 @@ samp = np.array(samp, dtype=np.float64)
 model = ASR()
 model.cuda()
 model.load_state_dict(torch.load("ASR"))
-spectrogram = torch.tensor(librosa.feature.mfcc(y=samp,sr=16000,S=None,n_mfcc=28,n_fft=512,hop_length=256)).transpose(0,1)
+n_fft = int(16000*0.035)
+hop = n_fft//2
+spectrogram = torch.tensor(librosa.feature.mfcc(y=samp,sr=16000,S=None,n_mfcc=28,n_fft=n_fft,hop_length=hop)).transpose(0,1)
+sequence = torch.split(spectrogram, 1)
 
-sequence = torch.split(spectrogram, 2)
-
-if sequence[-1].size()[0] != 2:
+if sequence[-1].size()[0] != 1:
     sequence = sequence[:-1]
 sequence = torch.stack(sequence).cuda()
 
-sequence = sequence.reshape(-1, 28 * 2)
+sequence = sequence.reshape(-1, 28 * 1)
 
 sequence =torch.unsqueeze(sequence,dim=1).cuda()
 
