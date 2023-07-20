@@ -5,7 +5,7 @@ class ASR(torch.nn.Module):
     def __init__(self):
         super(ASR, self).__init__()
 
-        self.rnn = torch.nn.LSTM(1*28, 128, 2, dropout=0.3, bidirectional=True)
+        self.rnn = torch.nn.LSTM(1*13, 128, 3, dropout=0.2, bidirectional=True)
         self.linear = torch.nn.Linear(256, 34)
 
     def forward(self, x):
@@ -17,7 +17,7 @@ class ASR(torch.nn.Module):
         return output
 
     def train(self, epochesCount, dataset,validate = None):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.0002)
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.003)
         torch.autograd.set_detect_anomaly(True)
         for i in range(epochesCount):
             print("Epoch:", i + 1)

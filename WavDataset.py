@@ -9,8 +9,10 @@ import os
 import random
 import librosa
 import numpy as np
+import python_speech_features as pf
+
 class WavDataSet(Dataset):
-    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,count = 190512):
+    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,count = 200030):
         self.train_data = []
         self.transform = transform
         self.folder = folder
@@ -42,11 +44,12 @@ class WavDataSet(Dataset):
         freq, samp = wavfile.read(self.folder + file, "r")
 
         if self.transform:
-            samp = self.transform(samp)
+            for transform in self.transform:
+                samp = transform(samp)
         samp = np.array(samp,dtype=np.float64)
-        n_fft = int(16000*0.035)
-        hop = n_fft//2
-        spectrogram = torch.tensor(librosa.feature.mfcc(y=samp,sr=16000,S=None,n_mfcc=28,n_fft=n_fft,hop_length=hop)).transpose(0,1)
+        n_fft = 512
+        hop = 160
+        spectrogram = torch.tensor(pf.mfcc(samp,freq))
 
 
 
@@ -64,7 +67,7 @@ class WavDataSet(Dataset):
         l = sequence.min()
         #sequence -=sequence.min()
         #sequence /= 20
-        sequence = sequence.reshape(-1,28*split_size)
+        sequence = torch.squeeze(sequence)
         assert sequence.isnan().any().item() == 0
         target = torch.tensor([alphabet[i] for i in self.train_data[idx]["text"]])
 

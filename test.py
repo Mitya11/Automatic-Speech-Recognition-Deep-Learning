@@ -10,7 +10,7 @@ from transforms import RandomOffset
 from datetime import datetime
 import librosa
 from transforms import RandomOffset
-
+import python_speech_features as pf
 freq, samp = wavfile.read("WavTrain/crowd/WIN_20230714_01_38_40_Pro.wav","r")#Салют вызов Светлане Васильевне
 #samp = RandomOffset()(samp)
 samp = np.array(samp, dtype=np.float64)
@@ -18,9 +18,9 @@ samp = np.array(samp, dtype=np.float64)
 model = ASR()
 model.cuda()
 model.load_state_dict(torch.load("ASR"))
-n_fft = int(16000*0.035)
+n_fft = int(16000*0.05)
 hop = n_fft//2
-spectrogram = torch.tensor(librosa.feature.mfcc(y=samp,sr=16000,S=None,n_mfcc=28,n_fft=n_fft,hop_length=hop)).transpose(0,1)
+spectrogram = torch.tensor(pf.mfcc(samp,freq))
 sequence = torch.split(spectrogram, 1)
 
 if sequence[-1].size()[0] != 1:

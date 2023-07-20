@@ -6,7 +6,7 @@ from WavDataset import WavDataSet
 from model import ASR
 import torch
 from utils import decode_result
-from transforms import RandomOffset
+from transforms import RandomOffset,RandomNoise
 from datetime import datetime
 
 #torch.set_num_threads(8)
@@ -30,9 +30,9 @@ print(len(spectrogram))
 #plt.imshow(spectrogram.transpose(), origin = "lower")
 #plt.show()
 
-dataset = WavDataSet(folder="WavTrain/train/",transform=RandomOffset())
+dataset = WavDataSet(folder="WavTrain/train/",transform=[RandomOffset()])
 
-train = torch.utils.data.Subset(dataset, range(int(len(dataset)-533)))
+train = dataset
 val = WavDataSet(folder="WavTrain/crowd/",count=533)
 train_data = torch.utils.data.DataLoader(train,batch_size=48,collate_fn=custom_collate,shuffle=True)
 val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_collate,shuffle=False)
@@ -42,8 +42,8 @@ model = ASR()
 model.load_state_dict(torch.load("ASR"))
 model.cuda()
 start_time = datetime.now()
-#model.train(1, train_data,val_data)
-model.validate_epoch(val_data)
+model.train(1, train_data,val_data)
+#model.validate_epoch(val_data)
 try:
     1
 except:

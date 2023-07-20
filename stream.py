@@ -11,6 +11,7 @@ from transforms import RandomOffset
 from datetime import datetime
 import librosa
 from transforms import RandomOffset
+import python_speech_features as pf
 
 CHUNK = 32000 # number of data points to read at a time
 RATE = 16000 # time resolution of the recording device (Hz)
@@ -28,17 +29,17 @@ for i in range(100000): #to it a few times just to see
     data = np.fromstring(stream.read(CHUNK,exception_on_overflow = False),dtype=np.int16)
     data = data.astype(np.float64)
     print(data)
-    n_fft = int(16000 * 0.035)
+
+    n_fft = int(16000 * 0.025)
     hop = n_fft // 2
-    spectrogram = torch.tensor(
-        librosa.feature.mfcc(y=data, sr=16000, S=None, n_mfcc=28, n_fft=n_fft, hop_length=hop)).transpose(0, 1)
+    spectrogram = torch.tensor(pf.mfcc(data, RATE))
     sequence = torch.split(spectrogram, 1)
 
     if sequence[-1].size()[0] != 1:
         sequence = sequence[:-1]
     sequence = torch.stack(sequence).cuda()
 
-    sequence = sequence.reshape(-1, 28 * 1)
+    sequence = torch.squeeze(sequence)
 
     sequence = torch.unsqueeze(sequence, dim=1).cuda()
 

@@ -9,3 +9,10 @@ class RandomOffset:
             return wave_with_offset
         except:
             return wave
+class RandomNoise:
+    def __call__(self, wave):
+        period = random.randint(3,10)
+        multypliers = np.random.rand(period)
+        noise = np.random.normal(0,50,wave.size)
+        noise *= np.interp(range(wave.size),np.linspace(0,wave.size,period),multypliers)
+        return wave+noise
