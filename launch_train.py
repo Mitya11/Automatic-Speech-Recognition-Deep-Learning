@@ -33,7 +33,7 @@ print(len(spectrogram))
 dataset = WavDataSet(folder="WavTrain/train/",transform=[RandomOffset()])
 
 train = dataset
-val = WavDataSet(folder="WavTrain/crowd/",count=533)
+val = WavDataSet(folder="WavTrain/crowd/",count=2000)
 train_data = torch.utils.data.DataLoader(train,batch_size=48,collate_fn=custom_collate,shuffle=True)
 val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_collate,shuffle=False)
 

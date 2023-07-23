@@ -17,7 +17,7 @@ class ASR(torch.nn.Module):
         return output
 
     def train(self, epochesCount, dataset,validate = None):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.003)
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.0035)
         torch.autograd.set_detect_anomaly(True)
         for i in range(epochesCount):
             print("Epoch:", i + 1)
