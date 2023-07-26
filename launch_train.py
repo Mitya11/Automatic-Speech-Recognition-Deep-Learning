@@ -8,10 +8,7 @@ import torch
 from utils import decode_result
 from transforms import RandomOffset,RandomNoise
 from datetime import datetime
-import os
-
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
-
+from SpeechRecognition import SpeechRecognition
 #torch.set_num_threads(8)
 def custom_collate(batch):
     input_lengths = torch.tensor(list(map(lambda x:x[0].size(dim=0),batch)))
@@ -25,34 +22,27 @@ def custom_collate(batch):
     target_lengths = torch.where(target_lengths>=input_lengths,input_lengths-2,target_lengths)
     inputs = inputs.type(torch.float32)
     return inputs,target , input_lengths, target_lengths
-freq, samp = wavfile.read("WavTrain/crowd/files/794915d4730d7bd2870506ed5174d3ad.wav","r")#Салют вызов Светлане Васильевне
 
-print(freq)
-spectrogram =get_spectrogram(samp,freq,512)
-print(len(spectrogram))
-#plt.imshow(spectrogram.transpose(), origin = "lower")
-#plt.show()
 
-dataset = WavDataSet(folder="WavTrain/train/",transform=[RandomOffset()])
+dataset = WavDataSet(folder="H://WavTrain/crowd/")#,transform=[RandomOffset()])
 
 train = dataset
-val = WavDataSet(folder="WavTrain/crowd/",count=2000)
+#val = WavDataSet(folder="WavTrain/crowd/",count=2000)
 train_data = torch.utils.data.DataLoader(train,batch_size=48,collate_fn=custom_collate,shuffle=True)
-val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_collate,shuffle=False)
+#val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_collate,shuffle=False)
 
-
-model = ASR()
-model.load_state_dict(torch.load("ASR"))
-model.cuda()
+torch.set_printoptions(precision=3)
+model = SpeechRecognition()
+#model.load_state_dict(torch.load("ASR"))
 start_time = datetime.now()
-model.train(1, train_data,val_data)
+model.train(50, train_data)
 #model.validate_epoch(val_data)
 try:
     1
 except:
     pass
 
-torch.save(model.state_dict(), "ASR")
+#torch.save(model.state_dict(), "ASR")
 
 print("Total Time: {}".format(datetime.now()-start_time))
 

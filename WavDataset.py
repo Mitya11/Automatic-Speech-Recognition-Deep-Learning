@@ -12,7 +12,7 @@ import numpy as np
 import python_speech_features as pf
 
 class WavDataSet(Dataset):
-    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,count = 330024):
+    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,count = 1):
         self.train_data = []
         self.transform = transform
         self.folder = folder
@@ -49,7 +49,7 @@ class WavDataSet(Dataset):
         samp = np.array(samp,dtype=np.float64)
         n_fft = 512
         hop = 160
-        spectrogram = torch.tensor(pf.mfcc(samp,freq))
+        spectrogram = torch.tensor(pf.mfcc(samp, freq, numcep=18))
 
 
 
