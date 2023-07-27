@@ -35,7 +35,7 @@ torch.set_printoptions(precision=3)
 model = SpeechRecognition()
 #model.load_state_dict(torch.load("ASR"))
 start_time = datetime.now()
-model.train(50, train_data)
+model.train(20, train_data)
 #model.validate_epoch(val_data)
 try:
     1

@@ -26,6 +26,7 @@ class SpeechRecognition:
         return encoder_output
 
     def train(self, epochesCount ,train_data,val_data= None):
+        self.load()
         encoder_optimizer = torch.optim.Adam(self.encoder.parameters(), lr=0.02)
         decoder_optimizer = torch.optim.Adam(self.decoder.parameters(), lr=0.02)
         torch.autograd.set_detect_anomaly(True)
@@ -44,7 +45,7 @@ class SpeechRecognition:
                 encoder_output, prev_hidden = self.encoder(input)
 
                 output = torch.zeros((encoder_output.shape[1]),dtype=torch.long)
-                hidden = (prev_hidden,prev_hidden)
+                hidden = (prev_hidden.repeat(2,1,1),prev_hidden.repeat(2,1,1))
 
                 result = []
                 for j in range(target.size()[1]):
@@ -67,4 +68,10 @@ class SpeechRecognition:
                 decoder_optimizer.step()
                 sr += float(loss)
             print("LOSS:",sr)
-
+        self.save()
+    def load(self):
+        self.encoder.load_state_dict(torch.load("trained_param/encoder_params"))
+        self.decoder.load_state_dict(torch.load("trained_param/decoder_params"))
+    def save(self):
+        torch.save(self.encoder.state_dict(), "trained_param/encoder_params")
+        torch.save(self.decoder.state_dict(), "trained_param/decoder_params")

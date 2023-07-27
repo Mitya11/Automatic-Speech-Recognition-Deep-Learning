@@ -111,20 +111,21 @@ class EncoderNN(torch.nn.Module):
 class DecoderNN(torch.nn.Module):
     def __init__(self, hidden_size=256):
         super(DecoderNN, self).__init__()
+        self.hidden_size = hidden_size
 
         #Attention
-        self.W_decoder = torch.nn.Linear(hidden_size, hidden_size)
+        self.W_decoder = torch.nn.Linear(2*hidden_size, hidden_size)
         self.W_encoder = torch.nn.Linear(hidden_size, hidden_size)
         self.W_align = torch.nn.Parameter(torch.rand((hidden_size,1)))
 
         self.embedding = torch.nn.Embedding(34,hidden_size)
-        self.lstm = torch.nn.LSTM(2*hidden_size,hidden_size)
+        self.lstm = torch.nn.LSTM(2*hidden_size,hidden_size,2)
         self.linear = torch.nn.Linear(hidden_size,34)
     def forward(self,encoder_outputs,hidden_state,prev_output):
         encoder_outputs = encoder_outputs.transpose(0,1)
         batch_size = encoder_outputs.shape[0]
 
-        scores = torch.tanh(self.W_encoder(encoder_outputs) + self.W_decoder(hidden_state[0].transpose(0,1))) #seq*hid
+        scores = torch.tanh(self.W_encoder(encoder_outputs) + self.W_decoder(hidden_state[0].transpose(0,1).reshape(batch_size,-1,2*self.hidden_size))) #seq*hid
         scores = torch.bmm(scores,self.W_align.unsqueeze(0).repeat(batch_size,1,1))
 
         attent_weights = torch.nn.functional.softmax(scores,dim=1) #B*S*1
