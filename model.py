@@ -122,9 +122,10 @@ class DecoderNN(torch.nn.Module):
         self.linear = torch.nn.Linear(hidden_size,34)
     def forward(self,encoder_outputs,hidden_state,prev_output):
         encoder_outputs = encoder_outputs.transpose(0,1)
+        batch_size = encoder_outputs.shape[0]
 
         scores = torch.tanh(self.W_encoder(encoder_outputs) + self.W_decoder(hidden_state[0].transpose(0,1))) #seq*hid
-        scores = torch.bmm(scores,self.W_align.unsqueeze(0).repeat(encoder_outputs.shape[0],1,1))
+        scores = torch.bmm(scores,self.W_align.unsqueeze(0).repeat(batch_size,1,1))
 
         attent_weights = torch.nn.functional.softmax(scores,dim=1) #B*S*1
         context_vector = torch.bmm(attent_weights.transpose(1,2),encoder_outputs) # B*1*H
@@ -134,6 +135,6 @@ class DecoderNN(torch.nn.Module):
 
         output,hidden = self.lstm(decoder_input,hidden_state) #1*B*H
 
-        result = torch.nn.functional.softmax(self.linear(torch.squeeze(output,dim=0)),dim=1)
+        result = torch.nn.functional.log_softmax(self.linear(torch.squeeze(output,dim=0)),dim=1)
 
         return result, hidden
