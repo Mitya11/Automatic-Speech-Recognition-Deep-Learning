@@ -75,13 +75,13 @@ class EncoderNN(torch.nn.Module):
     def __init__(self):
         super(EncoderNN, self).__init__()
         #pyromidal LSTM
-        self.lstm1 = torch.nn.LSTM(1 * 18, 128, 1, dropout=0.0, bidirectional=True)
+        self.lstm1 = torch.nn.LSTM(1 * 18, 128, 1, dropout=0.2, bidirectional=True)
         self.linear1 = torch.nn.Linear(512,128)
 
-        self.lstm2 = torch.nn.LSTM(128, 128, 1, dropout=0.0, bidirectional=True)
+        self.lstm2 = torch.nn.LSTM(128, 128, 1, dropout=0.2, bidirectional=True)
         self.linear2 = torch.nn.Linear(512,128)
 
-        self.lstm3 = torch.nn.LSTM(128, 128, 1, dropout=0.0, bidirectional=True)
+        self.lstm3 = torch.nn.LSTM(128, 128, 1, dropout=0.2, bidirectional=True)
         self.linear3 = torch.nn.Linear(512,256)
 
     def forward(self, x):
@@ -123,8 +123,8 @@ class DecoderNN(torch.nn.Module):
     def forward(self,encoder_outputs,hidden_state,prev_output):
         encoder_outputs = encoder_outputs.transpose(0,1)
 
-        scores = torch.tanh(self.W_encoder(encoder_outputs) + self.W_decoder(hidden_state[0])) #seq*hid
-        scores = torch.bmm(scores,self.W_align.unsqueeze(0))
+        scores = torch.tanh(self.W_encoder(encoder_outputs) + self.W_decoder(hidden_state[0].transpose(0,1))) #seq*hid
+        scores = torch.bmm(scores,self.W_align.unsqueeze(0).repeat(encoder_outputs.shape[0],1,1))
 
         attent_weights = torch.nn.functional.softmax(scores,dim=1) #B*S*1
         context_vector = torch.bmm(attent_weights.transpose(1,2),encoder_outputs) # B*1*H

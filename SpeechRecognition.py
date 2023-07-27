@@ -33,7 +33,7 @@ class SpeechRecognition:
         for epoch in range(epochesCount):
             print("Epoch:", epoch + 1)
             it = iter(train_data)
-            NLL = torch.nn.NLLLoss()
+            NLL = torch.nn.NLLLoss(ignore_index=0)
             sr = 0
             for i in range(len(train_data)):
                 input ,target, _,_ = next(it)
@@ -43,15 +43,15 @@ class SpeechRecognition:
 
                 encoder_output, prev_hidden = self.encoder(input)
 
-                output = torch.zeros((1),dtype=torch.long)
+                output = torch.zeros((encoder_output.shape[1]),dtype=torch.long)
                 hidden = (prev_hidden,prev_hidden)
 
                 result = []
                 for j in range(target.size()[1]):
                     #teacher forcing
                     output, hidden = self.decoder(encoder_output, hidden, output)
-                    loss += NLL(output,target[:,j])
-                    result.append(torch.argmax(output, dim=1).item())
+                    loss += NLL(output,target[:,j]).nan_to_num(0)
+                    result.append(torch.argmax(output[0:1], dim=1).item())
                     output = target[:,j]
 
 

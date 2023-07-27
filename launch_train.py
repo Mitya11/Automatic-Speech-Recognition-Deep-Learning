@@ -16,7 +16,7 @@ def custom_collate(batch):
     inputs = torch.nn.utils.rnn.pad_sequence(list(map(lambda x: x[0],batch)))
     target = torch.transpose(torch.nn.utils.rnn.pad_sequence(list(map(lambda x: x[1],batch))),0,1)
     #target = torch.cat([target, torch.zeros((target.size()[0],max(inputs.size()[0]-target.size()[1],0)))],dim=1)
-    target = torch.where(target ==0,33,target)
+    target = torch.where(target ==0,0,target)
     """if target.size()[1] >= inputs.size()[0]:
         target = target[:,:inputs.size()[0]-2]"""
     target_lengths = torch.where(target_lengths>=input_lengths,input_lengths-2,target_lengths)
