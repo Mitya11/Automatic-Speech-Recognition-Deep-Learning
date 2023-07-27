@@ -8,6 +8,9 @@ import torch
 from utils import decode_result
 from transforms import RandomOffset,RandomNoise
 from datetime import datetime
+import os
+
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
 
 #torch.set_num_threads(8)
 def custom_collate(batch):

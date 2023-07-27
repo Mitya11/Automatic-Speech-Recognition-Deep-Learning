@@ -12,7 +12,7 @@ import numpy as np
 import python_speech_features as pf
 
 class WavDataSet(Dataset):
-    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,count = 2000030):
+    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,count = 330024):
         self.train_data = []
         self.transform = transform
         self.folder = folder
