@@ -96,7 +96,6 @@ class EncoderNN(torch.nn.Module):
 
             return torch.stack(output)
 
-        x = x
         x, _ = self.lstm1(x)
         x = torch.tanh(self.linear1(pyromidal_transform(x)))
 
@@ -119,7 +118,7 @@ class DecoderNN(torch.nn.Module):
         self.W_align = torch.nn.Parameter(torch.rand((hidden_size,1)))
 
         self.embedding = torch.nn.Embedding(34,hidden_size)
-        self.lstm = torch.nn.LSTM(2*hidden_size,hidden_size,2)
+        self.lstm = torch.nn.LSTM(2*hidden_size,hidden_size,2,dropout=0.2)
         self.linear = torch.nn.Linear(hidden_size,34)
     def forward(self,encoder_outputs,hidden_state,prev_output):
         encoder_outputs = encoder_outputs.transpose(0,1)

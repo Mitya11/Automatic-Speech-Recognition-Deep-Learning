@@ -24,18 +24,18 @@ def custom_collate(batch):
     return inputs,target , input_lengths, target_lengths
 
 
-dataset = WavDataSet(folder="H://WavTrain/crowd/")#,transform=[RandomOffset()])
+dataset = WavDataSet(folder="WavTrain/train/")#,transform=[RandomOffset()])
 
 train = dataset
-#val = WavDataSet(folder="WavTrain/crowd/",count=2000)
+val = WavDataSet(folder="WavTrain/crowd/",count=2000)
 train_data = torch.utils.data.DataLoader(train,batch_size=48,collate_fn=custom_collate,shuffle=True)
-#val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_collate,shuffle=False)
+val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_collate,shuffle=False)
 
 torch.set_printoptions(precision=3)
 model = SpeechRecognition()
 #model.load_state_dict(torch.load("ASR"))
 start_time = datetime.now()
-model.train(20, train_data)
+model.train(1, train_data,val_data)
 #model.validate_epoch(val_data)
 try:
     1
