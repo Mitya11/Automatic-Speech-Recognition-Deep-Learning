@@ -3,7 +3,7 @@ from model import EncoderNN, DecoderNN
 import numpy as np
 import python_speech_features as pf
 import noisereduce as nr
-
+import random
 
 class SpeechRecognition:
     def __init__(self):
@@ -33,14 +33,13 @@ class SpeechRecognition:
 
     def train(self, epochesCount ,train_data,val_data= None):
         self.load()
-        encoder_optimizer = torch.optim.Adam(self.encoder.parameters(), lr=0.02)
-        decoder_optimizer = torch.optim.Adam(self.decoder.parameters(), lr=0.02)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters()), lr=0.001)
         torch.autograd.set_detect_anomaly(True)
 
         for epoch in range(epochesCount):
             print("Epoch:", epoch + 1)
             it = iter(train_data)
-            NLL = torch.nn.NLLLoss(ignore_index=0)
+            NLL = torch.nn.CrossEntropyLoss(ignore_index=0)
             sr = 0
             for i in range(len(train_data)):
                 inputs ,target, _,_ = next(it)
@@ -48,13 +47,12 @@ class SpeechRecognition:
                 target = target.to(self.device)
 
                 loss = torch.tensor(0,dtype=torch.float64,device = self.device)
-                encoder_optimizer.zero_grad()
-                decoder_optimizer.zero_grad()
+                optimizer.zero_grad()
 
                 encoder_output, prev_hidden = self.encoder(inputs)
 
-                output = torch.zeros((encoder_output.shape[1]),dtype=torch.long,device = self.device)
-                hidden = (prev_hidden.repeat(2,1,1),prev_hidden.repeat(2,1,1))
+                output = torch.nn.functional.one_hot(torch.zeros(encoder_output.shape[0],dtype=torch.long,device = self.device),num_classes=34).to(dtype=torch.float32)
+                hidden = (prev_hidden.repeat(1,1,1),prev_hidden.repeat(1,1,1))
 
                 result = []
                 for j in range(target.size()[1]):
@@ -62,8 +60,13 @@ class SpeechRecognition:
                     output, hidden = self.decoder(encoder_output, hidden, output)
                     loss += NLL(output,target[:,j]).nan_to_num(0)
                     result.append(torch.argmax(output[0:1], dim=1).item())
-                    output = target[:,j]
-
+                    if random.randint(1,100) <5:
+                        output = target[:,j]
+                    else:
+                        output = torch.argmax(output, dim=1)
+                    output = torch.nn.functional.one_hot(
+                        output, num_classes=34).to(
+                        dtype=torch.float32)
 
                 from utils import alphabet
                 import itertools
@@ -73,15 +76,16 @@ class SpeechRecognition:
 
 
                 loss.backward()
-                encoder_optimizer.step()
-                decoder_optimizer.step()
+                #print(self.encoder.lstm1.all_weights[0][0].grad)
+                optimizer.step()
+
                 sr += float(loss)
             print("LOSS:",sr)
 
             if val_data:
                 it = iter(val_data)
                 sr = 0
-                NLL = torch.nn.NLLLoss(ignore_index=0)
+                NLL = torch.nn.CrossEntropyLoss(ignore_index=0)
 
                 with torch.no_grad():
                     for i in range(len(val_data)):
@@ -91,8 +95,10 @@ class SpeechRecognition:
 
                         encoder_output, prev_hidden = self.encoder(inputs)
 
-                        output = torch.zeros((encoder_output.shape[1]), dtype=torch.long, device=self.device)
-                        hidden = (prev_hidden.repeat(2, 1, 1), prev_hidden.repeat(2, 1, 1))
+                        output = torch.nn.functional.one_hot(
+                            torch.zeros(encoder_output.shape[0], dtype=torch.long, device=self.device),
+                            num_classes=34).to(dtype=torch.float32)
+                        hidden = (prev_hidden.repeat(1, 1, 1), prev_hidden.repeat(1, 1, 1))
 
                         result = []
                         for j in range(target.size()[1]):
@@ -102,6 +108,9 @@ class SpeechRecognition:
 
                             result.append(torch.argmax(output[0:1], dim=1).item())
                             output = torch.argmax(output, dim=1)
+                            output = torch.nn.functional.one_hot(
+                                output, num_classes=34).to(
+                                dtype=torch.float32)
 
                         from utils import alphabet
                         import itertools
