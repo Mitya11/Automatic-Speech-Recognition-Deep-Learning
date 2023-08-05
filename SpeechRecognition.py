@@ -33,7 +33,7 @@ class SpeechRecognition:
 
     def train(self, epochesCount ,train_data,val_data= None):
         self.load()
-        optimizer = torch.optim.Adam(list(self.decoder.parameters()), lr=0.001)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters())+list(self.encoder.parameters()), lr=0.002)
         torch.autograd.set_detect_anomaly(True)
 
         for epoch in range(epochesCount):
@@ -51,22 +51,23 @@ class SpeechRecognition:
 
                 encoder_output, prev_hidden = self.encoder(inputs)
 
-                output = torch.nn.functional.one_hot(torch.zeros(encoder_output.shape[0],dtype=torch.long,device = self.device),num_classes=34).to(dtype=torch.float32)
-                hidden = (prev_hidden.repeat(1,1,1),prev_hidden.repeat(1,1,1))
+                output = torch.nn.functional.one_hot(torch.full([encoder_output.shape[0]],34,dtype=torch.long,device = self.device),num_classes=36).to(dtype=torch.float32)
+                rnn_input = torch.cat([output.unsqueeze(dim=1), encoder_output[:, 0:1, :]], dim=-1)
 
+                hidden = None
                 result = []
                 for j in range(target.size()[1]):
                     #teacher forcing
-                    output, hidden = self.decoder(encoder_output, hidden, output)
+                    output, hidden,context = self.decoder(encoder_output, rnn_input, hidden)
                     loss += NLL(output,target[:,j]).nan_to_num(0)
                     result.append(torch.argmax(output[0:1], dim=1).item())
-                    if random.randint(1,100) <5:
+                    if random.randint(1,100) <60:
                         output = target[:,j]
-                    else:
-                        output = torch.argmax(output, dim=1)
-                    output = torch.nn.functional.one_hot(
-                        output, num_classes=34).to(
-                        dtype=torch.float32)
+                        output = torch.nn.functional.one_hot(
+                            output, num_classes=36).to(
+                            dtype=torch.float32)
+
+                    rnn_input = torch.cat([output.unsqueeze(dim=1), context.unsqueeze(1)], dim=-1)
 
                 from utils import alphabet
                 import itertools
@@ -96,21 +97,24 @@ class SpeechRecognition:
                         encoder_output, prev_hidden = self.encoder(inputs)
 
                         output = torch.nn.functional.one_hot(
-                            torch.zeros(encoder_output.shape[0], dtype=torch.long, device=self.device),
-                            num_classes=34).to(dtype=torch.float32)
-                        hidden = (prev_hidden.repeat(1, 1, 1), prev_hidden.repeat(1, 1, 1))
+                            torch.full([encoder_output.shape[0]], 34, dtype=torch.long, device=self.device),
+                            num_classes=36).to(dtype=torch.float32)
+                        rnn_input = torch.cat([output.unsqueeze(dim=1), encoder_output[:, 0:1, :]], dim=-1)
 
+                        hidden = None
                         result = []
                         for j in range(target.size()[1]):
                             # teacher forcing
-                            output, hidden = self.decoder(encoder_output, hidden, output)
+                            output, hidden, context = self.decoder(encoder_output, rnn_input, hidden)
                             sr += NLL(output, target[:, j]).nan_to_num(0)
-
                             result.append(torch.argmax(output[0:1], dim=1).item())
-                            output = torch.argmax(output, dim=1)
-                            output = torch.nn.functional.one_hot(
-                                output, num_classes=34).to(
-                                dtype=torch.float32)
+                            if random.randint(1, 100) < 60:
+                                output = target[:, j]
+                                output = torch.nn.functional.one_hot(
+                                    output, num_classes=36).to(
+                                    dtype=torch.float32)
+
+                            rnn_input = torch.cat([output.unsqueeze(dim=1), context.unsqueeze(1)], dim=-1)
 
                         from utils import alphabet
                         import itertools

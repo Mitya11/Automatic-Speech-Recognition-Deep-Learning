@@ -12,7 +12,7 @@ import numpy as np
 import python_speech_features as pf
 
 class WavDataSet(Dataset):
-    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,count = 120000):
+    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,count = 300000):
         self.train_data = []
         self.transform = transform
         self.folder = folder
@@ -29,6 +29,7 @@ class WavDataSet(Dataset):
                 if i >=count:
                     break
         #self.train_data = self.train_data[-2500:-2]
+        self.train_data.sort(key= lambda x:x["duration"])
     def __len__(self):
         return len(self.train_data)
 
@@ -72,6 +73,6 @@ class WavDataSet(Dataset):
         #sequence /= 20
         sequence = torch.squeeze(sequence)
         assert sequence.isnan().any().item() == 0
-        target = torch.tensor([alphabet[i] for i in self.train_data[idx]["text"]])
+        target = torch.tensor([alphabet[i] for i in self.train_data[idx]["text"]]+[35])
 
         return sequence, target

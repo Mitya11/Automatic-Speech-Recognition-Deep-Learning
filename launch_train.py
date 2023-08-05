@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from spectrogram import get_spectrogram,get_mel_spectrogram
 import numpy as np
 from WavDataset import WavDataSet
-from model import ASR
 import torch
 from utils import decode_result
 from transforms import RandomOffset,RandomNoise
@@ -28,7 +27,7 @@ dataset = WavDataSet(folder="WavTrain/train/")#,transform=[RandomOffset()])
 
 train = dataset
 val = WavDataSet(folder="WavTrain/crowd/",count=2000)
-train_data = torch.utils.data.DataLoader(train,batch_size=8,collate_fn=custom_collate,shuffle=True)
+train_data = torch.utils.data.DataLoader(train,batch_size=16,collate_fn=custom_collate,shuffle=False)
 val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_collate,shuffle=False)
 
 torch.set_printoptions(precision=3)
