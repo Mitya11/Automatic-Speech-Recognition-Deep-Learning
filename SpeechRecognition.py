@@ -38,8 +38,8 @@ class SpeechRecognition:
 
         self.ctc_classifier = CTCdecoder().to(self.device)
 
-        #self.load(ctc_load=True)
-        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.001)
+        self.load(ctc_load=True)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.0005)
         torch.autograd.set_detect_anomaly(True)
 
         for epoch in range(epochesCount):
@@ -63,16 +63,16 @@ class SpeechRecognition:
                 loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths)
 
                 # Attention-based model
-                output = torch.nn.functional.one_hot(
+                prev_output = torch.nn.functional.one_hot(
                     torch.full([encoder_output.shape[0]], 34, dtype=torch.long, device=self.device), num_classes=36).to(
                     dtype=torch.float32)
-                rnn_input = torch.cat([output.unsqueeze(dim=1), encoder_output[:, 0:1, :]], dim=-1)
+                #rnn_input = torch.cat([output.unsqueeze(dim=1), encoder_output[:, 0:1, :]], dim=-1)
 
-                hidden = None
+                hidden = [torch.zeros((1,encoder_output.shape[0],512), device=self.device)]*2
                 result = []
                 for j in range(target.size()[1]):
                     # teacher forcing
-                    output, hidden, context = self.decoder(encoder_output, rnn_input, hidden)
+                    output, hidden, context = self.decoder(encoder_output, prev_output, hidden)
                     loss += criterion_cross(output, target[:, j]).nan_to_num(0)
                     result.append(torch.argmax(output[0:1], dim=1).item())
                     if random.randint(1, 100) < 40:
@@ -81,7 +81,7 @@ class SpeechRecognition:
                             output, num_classes=36).to(
                             dtype=torch.float32)
 
-                    rnn_input = torch.cat([output.unsqueeze(dim=1), context.unsqueeze(1)], dim=-1)
+                    prev_output = output
 
                 from utils import alphabet
                 import itertools

@@ -27,14 +27,14 @@ class EncoderNN(torch.nn.Module):
         # pyromidal LSTM
         self.BLSTM1 = pBLSTM(1 * 39, 256)
         self.BLSTM2 = pBLSTM(512, 256)
-        #self.BLSTM3 = pBLSTM(512, 256)
+        self.BLSTM3 = pBLSTM(512, 256)
 
     def forward(self, x):
         x = x.contiguous().transpose(0, 1)
 
         x, h = self.BLSTM1(x)
         x, _ = self.BLSTM2(x)
-        #x, h = self.BLSTM3(x)
+        x, h = self.BLSTM3(x)
         p = x[0].cpu().detach().numpy()
 
         return x, h

@@ -5,11 +5,11 @@ class Attention(torch.nn.Module):
         super(Attention, self).__init__()
         self.encode = torch.nn.Linear(512, 512)
         self.decode = torch.nn.Linear(512, 512)
-        self.attent_weights = torch.nn.Linear(512,1)
+        self.attent_weights = torch.nn.Linear(512,1,bias=False)
         self.softmax = torch.nn.Softmax(dim=-1)
 
     def forward(self, decoder_state, listener_feature):
-        con_decoder_state = self.decode(decoder_state)
+        con_decoder_state = self.decode(decoder_state[0].transpose(0,1))
         con_listener_feature = self.encode(listener_feature)
         p = listener_feature[0].cpu().detach().numpy()
 
@@ -31,9 +31,14 @@ class DecoderNN(torch.nn.Module):
         self.rnn_layer = torch.nn.LSTM(548, 512, 1, batch_first=True)
         self.character_distribution = torch.nn.Linear(1024, 36)
 
-    def forward(self, listener_feature, rnn_input, hidden_state):
+    def forward(self, listener_feature, prev_output, hidden_state):
+        attention_score, context = self.attention(hidden_state, listener_feature)
+        rnn_input = torch.cat([prev_output.squeeze(dim=1), context], dim=-1).unsqueeze(dim=1)
+
+
         rnn_output, hidden_state = self.rnn_layer(rnn_input,hidden_state)
-        attention_score, context = self.attention(rnn_output, listener_feature)
-        concat_feature = torch.cat([rnn_output.squeeze(dim=1), context], dim=-1)
+        p = rnn_output[0].cpu().detach().numpy()
+
+        concat_feature = torch.cat([hidden_state[0].squeeze(dim=0), context], dim=-1)
         raw_pred = self.character_distribution(concat_feature)
         return raw_pred, hidden_state, context
