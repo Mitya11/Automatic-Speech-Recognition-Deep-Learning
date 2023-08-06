@@ -36,9 +36,9 @@ class SpeechRecognition:
 
     def train(self, epochesCount, train_data, val_data=None):
 
-        self.ctc_classifier = CTCdecoder()
+        self.ctc_classifier = CTCdecoder().to(self.device)
 
-        self.load(ctc_load=True)
+        #self.load(ctc_load=True)
         optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.001)
         torch.autograd.set_detect_anomaly(True)
 
@@ -75,7 +75,7 @@ class SpeechRecognition:
                     output, hidden, context = self.decoder(encoder_output, rnn_input, hidden)
                     loss += criterion_cross(output, target[:, j]).nan_to_num(0)
                     result.append(torch.argmax(output[0:1], dim=1).item())
-                    if random.randint(1, 100) < 60:
+                    if random.randint(1, 100) < 40:
                         output = target[:, j]
                         output = torch.nn.functional.one_hot(
                             output, num_classes=36).to(
