@@ -39,7 +39,7 @@ class SpeechRecognition:
         self.ctc_classifier = CTCdecoder().to(self.device)
 
         self.load(ctc_load=True)
-        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.0005)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.001)
         torch.autograd.set_detect_anomaly(True)
 
         for epoch in range(epochesCount):
@@ -88,6 +88,7 @@ class SpeechRecognition:
                 text = "".join(list(map(lambda x: alphabet[x], result)))
                 result = "".join([c for c, k in itertools.groupby(text)]).replace("-", "")
                 print(result, len(text), "Completed:", round(i / len(train_data) * 100, 4), "%")
+                print("           -----", "".join([alphabet[i.item()] for i in target[0]]))
 
                 loss.backward()
                 # print(self.encoder.lstm1.all_weights[0][0].grad)
@@ -109,25 +110,26 @@ class SpeechRecognition:
 
                         encoder_output, prev_hidden = self.encoder(inputs)
 
-                        output = torch.nn.functional.one_hot(
+                        prev_output = torch.nn.functional.one_hot(
                             torch.full([encoder_output.shape[0]], 34, dtype=torch.long, device=self.device),
-                            num_classes=36).to(dtype=torch.float32)
-                        rnn_input = torch.cat([output.unsqueeze(dim=1), encoder_output[:, 0:1, :]], dim=-1)
+                            num_classes=36).to(
+                            dtype=torch.float32)
+                        # rnn_input = torch.cat([output.unsqueeze(dim=1), encoder_output[:, 0:1, :]], dim=-1)
 
-                        hidden = None
+                        hidden = [torch.zeros((1, encoder_output.shape[0], 512), device=self.device)] * 2
                         result = []
                         for j in range(target.size()[1]):
                             # teacher forcing
-                            output, hidden, context = self.decoder(encoder_output, rnn_input, hidden)
-                            sr += NLL(output, target[:, j]).nan_to_num(0)
+                            output, hidden, context = self.decoder(encoder_output, prev_output, hidden)
+                            sr += criterion_cross(output, target[:, j]).nan_to_num(0)
                             result.append(torch.argmax(output[0:1], dim=1).item())
-                            if random.randint(1, 100) < 60:
+                            if random.randint(1, 100) < 40:
                                 output = target[:, j]
                                 output = torch.nn.functional.one_hot(
                                     output, num_classes=36).to(
                                     dtype=torch.float32)
 
-                            rnn_input = torch.cat([output.unsqueeze(dim=1), context.unsqueeze(1)], dim=-1)
+                            prev_output = output
 
                         from utils import alphabet
                         import itertools

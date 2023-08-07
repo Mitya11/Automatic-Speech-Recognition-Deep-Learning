@@ -3,14 +3,14 @@ import torch
 class Attention(torch.nn.Module):
     def __init__(self):
         super(Attention, self).__init__()
-        self.encode = torch.nn.Linear(512, 512)
-        self.decode = torch.nn.Linear(512, 512)
+        #self.encode = torch.nn.Linear(512, 512)
+        self.decode = torch.nn.Linear(512, 512,bias=False)
         self.attent_weights = torch.nn.Linear(512,1,bias=False)
         self.softmax = torch.nn.Softmax(dim=-1)
 
     def forward(self, decoder_state, listener_feature):
         con_decoder_state = self.decode(decoder_state[0].transpose(0,1))
-        con_listener_feature = self.encode(listener_feature)
+        con_listener_feature = (listener_feature)
         p = listener_feature[0].cpu().detach().numpy()
 
 
