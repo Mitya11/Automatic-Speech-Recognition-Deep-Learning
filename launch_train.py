@@ -27,7 +27,7 @@ dataset = WavDataSet(folder="WavTrain/train/")#,transform=[RandomOffset()])
 
 train = dataset
 val = WavDataSet(folder="WavTrain/crowd/",count=2000)
-train_data = torch.utils.data.DataLoader(train,batch_size=24,collate_fn=custom_collate,shuffle=False)
+train_data = torch.utils.data.DataLoader(train,batch_size=32,collate_fn=custom_collate,shuffle=False)
 val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_collate,shuffle=False)
 
 torch.set_printoptions(precision=3)

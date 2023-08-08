@@ -39,7 +39,7 @@ class SpeechRecognition:
         self.ctc_classifier = CTCdecoder().to(self.device)
 
         self.load(ctc_load=True)
-        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.001)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.00015)
         torch.autograd.set_detect_anomaly(True)
 
         for epoch in range(epochesCount):
@@ -91,6 +91,7 @@ class SpeechRecognition:
                 print("           -----", "".join([alphabet[i.item()] for i in target[0]]))
 
                 loss.backward()
+                print(torch.nn.utils.clip_grad_norm_(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()), 1))
                 # print(self.encoder.lstm1.all_weights[0][0].grad)
                 optimizer.step()
 
