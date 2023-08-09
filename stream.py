@@ -4,9 +4,9 @@ from scipy.io import wavfile
 import matplotlib.pyplot as plt
 from spectrogram import get_spectrogram,get_mel_spectrogram
 from WavDataset import WavDataSet
-from model import ASR
+from SpeechRecognition import SpeechRecognition
 import torch
-from utils import decode_result
+from utils import decode_result,get_features
 from transforms import RandomOffset
 from datetime import datetime
 import librosa
@@ -22,33 +22,19 @@ stream=p.open(format=pyaudio.paInt16,channels=1,rate=RATE,input=True,
               frames_per_buffer=CHUNK) #uses default input device
 
 # create a numpy array holding a single read of audio data
-model = ASR()
-model.load_state_dict(torch.load("ASR",map_location=torch.device('cpu')))
+model = SpeechRecognition()
+model.load(False)
 with torch.no_grad():
     for i in range(100000): #to it a few times just to see
         data = np.fromstring(stream.read(CHUNK,exception_on_overflow = False),dtype=np.int16)
-        data = data.astype(np.float64)
+        data = data.astype(np.float32)
         print(data)
         data = nr.reduce_noise(data, RATE)
 
-        n_fft = int(16000 * 0.025)
-        hop = n_fft // 2
-        spectrogram = torch.tensor(pf.mfcc(data, RATE))
-        sequence = torch.split(spectrogram, 1)
-
-        if sequence[-1].size()[0] != 1:
-            sequence = sequence[:-1]
-        sequence = torch.stack(sequence)
-
-        sequence = torch.squeeze(sequence)
-
-        sequence = torch.unsqueeze(sequence, dim=1)
-
-        sequence = sequence.type(torch.float32)
-        # 237100
+        sequence = get_features(data,RATE).unsqueeze(dim=1).to(torch.float32).cuda()      # 237100
         result = model(sequence)
         print("Тест:")
-        decode_result(torch.exp(result))
+        print(decode_result(result))
 
 stream.stop_stream()
 stream.close()

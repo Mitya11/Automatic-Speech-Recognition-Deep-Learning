@@ -19,20 +19,26 @@ class SpeechRecognition:
             self.decoder.cuda()
             self.device = torch.device("cuda")
 
-    def __call__(self, samples, freq):
-        samples = samples.astype(np.float64)
-        samples = nr.reduce_noise(samples, freq)
-        mfcc = torch.tensor(pf.mfcc(samples, freq, numcep=18), device=self.device)
-        mfcc = torch.unsqueeze(mfcc, dim=1).type(torch.float32)
+    def __call__(self, sequence):
 
-        encoder_output, prev_hidden = self.encoder(mfcc)
+        encoder_output, prev_hidden = self.encoder(sequence)
 
         result = []
-        output, hidden = self.decoder(encoder_output, prev_hidden, torch.zeros((1), dtype=torch.int32))
-        for i in range(encoder_output.size()[0]):
-            output, hidden = self.decoder(encoder_output, hidden, torch.argmax(output, dim=1))
+        prev_output = torch.nn.functional.one_hot(
+            torch.full([encoder_output.shape[0]], 34, dtype=torch.long, device=self.device), num_classes=36).to(
+            dtype=torch.float32)
+        # rnn_input = torch.cat([output.unsqueeze(dim=1), encoder_output[:, 0:1, :]], dim=-1)
 
-        return encoder_output
+        hidden = [torch.zeros((1, encoder_output.shape[0], 512), device=self.device)] * 2
+        result = []
+        while torch.argmax(prev_output[0:1], dim=1) != 35:
+            # teacher forcing
+            output, hidden, context = self.decoder(encoder_output, prev_output, hidden)
+            result.append(torch.argmax(output[0:1], dim=1).item())
+
+            prev_output = output
+
+        return result
 
     def train(self, epochesCount, train_data, val_data=None):
 
