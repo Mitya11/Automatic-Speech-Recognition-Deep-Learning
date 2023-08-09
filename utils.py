@@ -11,14 +11,9 @@ alphabet = {'а': 1, 'б': 2, 'в': 3, 'г': 4, 'д': 5, 'е': 6, 'ж': 7, 'з':
             29: 'ь', 30: 'э', 31: 'ю', 32: 'я', 33: " ", 0: "-",34:"",35:"|"}
 
 def decode_result(nn_output):
-    nn_output = torch.squeeze(nn_output)
-    best_symbols = torch.argmax(nn_output,dim=1)
-    best_symbols = torch.where(best_symbols ==0,34,best_symbols)
-    text = "".join(list(map(lambda x:alphabet[x],best_symbols.tolist())))
-    result = "".join([c for c , k in itertools.groupby(text)]).replace("-","")
-    print(result, len(text))
-    return best_symbols
-
+    text = "".join(list(map(lambda x: alphabet[x], nn_output)))
+    result = "".join([c for c, k in itertools.groupby(text)]).replace("-", "")
+    return result
 def get_features(samp,freq):
     split_size = 1
 

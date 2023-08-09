@@ -14,7 +14,7 @@ from transforms import RandomOffset
 import python_speech_features as pf
 import noisereduce as nr
 
-CHUNK = int(2.5*16000) # number of data points to read at a time
+CHUNK = int(2*16000) # number of data points to read at a time
 RATE = 16000 # time resolution of the recording device (Hz)
 
 p=pyaudio.PyAudio() # start the PyAudio class
