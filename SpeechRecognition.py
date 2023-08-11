@@ -6,7 +6,7 @@ import numpy as np
 import python_speech_features as pf
 import noisereduce as nr
 import random
-
+from matplotlib import pyplot as plt
 
 class SpeechRecognition:
     def __init__(self):
@@ -45,7 +45,7 @@ class SpeechRecognition:
         self.ctc_classifier = CTCdecoder().to(self.device)
 
         self.load(ctc_load=True)
-        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.00015)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.00025)
         torch.autograd.set_detect_anomaly(True)
 
         for epoch in range(epochesCount):
@@ -66,7 +66,7 @@ class SpeechRecognition:
                 # CTC-based model
                 ctc_output = self.ctc_classifier(encoder_output)
                 input_lengths = input_lengths // 8
-                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths)
+                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0.2
 
                 # Attention-based model
                 prev_output = torch.nn.functional.one_hot(
@@ -76,19 +76,23 @@ class SpeechRecognition:
 
                 hidden = [torch.zeros((1,encoder_output.shape[0],512), device=self.device)]*2
                 result = []
+                attention_matrix = []
                 for j in range(target.size()[1]):
                     # teacher forcing
-                    output, hidden, context = self.decoder(encoder_output, prev_output, hidden)
+                    output, hidden, context , attention_score = self.decoder(encoder_output, prev_output, hidden)
                     loss += criterion_cross(output, target[:, j]).nan_to_num(0)
                     result.append(torch.argmax(output[0:1], dim=1).item())
-                    if random.randint(1, 100) < 40:
+                    if random.randint(1, 100) < 80:
                         output = target[:, j]
                         output = torch.nn.functional.one_hot(
                             output, num_classes=36).to(
                             dtype=torch.float32)
 
                     prev_output = output
+                    attention_matrix.append(attention_score[0][0])
 
+                plt.imshow(torch.stack(attention_matrix).cpu().detach())
+                plt.show()
                 from utils import alphabet
                 import itertools
                 text = "".join(list(map(lambda x: alphabet[x], result)))
@@ -103,7 +107,6 @@ class SpeechRecognition:
 
                 sr += float(loss)
             print("LOSS:", sr)
-
             if val_data:
                 it = iter(val_data)
                 sr = 0
@@ -127,10 +130,10 @@ class SpeechRecognition:
                         result = []
                         for j in range(target.size()[1]):
                             # teacher forcing
-                            output, hidden, context = self.decoder(encoder_output, prev_output, hidden)
+                            output, hidden, context,_ = self.decoder(encoder_output, prev_output, hidden)
                             sr += criterion_cross(output, target[:, j]).nan_to_num(0)
                             result.append(torch.argmax(output[0:1], dim=1).item())
-                            if random.randint(1, 100) < 40:
+                            if random.randint(1, 100) < 0:
                                 output = target[:, j]
                                 output = torch.nn.functional.one_hot(
                                     output, num_classes=36).to(

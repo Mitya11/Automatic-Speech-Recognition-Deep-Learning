@@ -5,7 +5,7 @@ class CTCdecoder(torch.nn.Module):
     def __init__(self):
         super(CTCdecoder, self).__init__()
 
-        self.linear = torch.nn.Linear(512,36)
+        self.linear = torch.nn.Linear(1024,36)
 
     def forward(self,x):
 

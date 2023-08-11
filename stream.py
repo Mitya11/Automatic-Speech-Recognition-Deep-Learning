@@ -29,7 +29,7 @@ with torch.no_grad():
         data = np.fromstring(stream.read(CHUNK,exception_on_overflow = False),dtype=np.int16)
         data = data.astype(np.float32)
         print(data)
-        data = nr.reduce_noise(data, RATE)
+        #data = nr.reduce_noise(data, RATE)
 
         sequence = get_features(data,RATE).unsqueeze(dim=1).to(torch.float32).cuda()      # 237100
         result = model(sequence)

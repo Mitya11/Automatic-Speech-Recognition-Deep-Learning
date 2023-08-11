@@ -12,7 +12,7 @@ import numpy as np
 import python_speech_features as pf
 
 class WavDataSet(Dataset):
-    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,count = 33):
+    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,count = 400000):
         self.train_data = []
         self.transform = transform
         self.folder = folder
@@ -22,14 +22,15 @@ class WavDataSet(Dataset):
                 json_line = json.loads(line)
                 if not os.path.isfile(folder+json_line["audio_filepath"]):
                     continue
-                if float(json_line["duration"]) > 6 or float(json_line["duration"]) < 1:
+                if float(json_line["duration"]) > 5.5 or float(json_line["duration"]) < 1:
                     continue
                 self.train_data.append(json_line)
                 i+=1
                 if i >=count:
                     break
-        #self.train_data = self.train_data[-2500:-2]
         self.train_data.sort(key= lambda x:x["duration"])
+        #self.train_data = self.train_data[:512]
+
     def __len__(self):
         return len(self.train_data)
 
