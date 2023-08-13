@@ -82,7 +82,7 @@ class SpeechRecognition:
                     output, hidden, context , attention_score = self.decoder(encoder_output, prev_output, hidden)
                     loss += criterion_cross(output, target[:, j]).nan_to_num(0)
                     result.append(torch.argmax(output[0:1], dim=1).item())
-                    if random.randint(1, 100) < 80:
+                    if random.randint(1, 100) < 90:
                         output = target[:, j]
                         output = torch.nn.functional.one_hot(
                             output, num_classes=36).to(
@@ -92,7 +92,7 @@ class SpeechRecognition:
                     attention_matrix.append(attention_score[0][0])
 
                 plt.imshow(torch.stack(attention_matrix).cpu().detach())
-                plt.show()
+                #plt.show()
                 from utils import alphabet
                 import itertools
                 text = "".join(list(map(lambda x: alphabet[x], result)))

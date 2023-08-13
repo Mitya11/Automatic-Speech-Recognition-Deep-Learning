@@ -34,12 +34,11 @@ torch.set_printoptions(precision=3)
 model = SpeechRecognition()
 #model.load_state_dict(torch.load("ASR"))
 start_time = datetime.now()
-model.train(1, train_data,val_data)
 #model.validate_epoch(val_data)
 try:
-    1
+    model.train(1, train_data,val_data)
 except:
-    pass
+    model.save(True)
 
 #torch.save(model.state_dict(), "ASR")
 
