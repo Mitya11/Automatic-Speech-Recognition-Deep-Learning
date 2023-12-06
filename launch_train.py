@@ -9,6 +9,8 @@ from transforms import RandomOffset,RandomNoise
 from datetime import datetime
 from SpeechRecognition import SpeechRecognition
 #torch.set_num_threads(8)
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
 def custom_collate(batch):
     input_lengths = torch.tensor(list(map(lambda x:x[0].size(dim=0),batch)))
     target_lengths = torch.tensor(list(map(lambda x:x[1].size(dim=0),batch)))
@@ -23,10 +25,10 @@ def custom_collate(batch):
     return inputs,target , input_lengths, target_lengths
 
 
-dataset = WavDataSet(folder="WavTrain/train/")#,transform=[RandomOffset()])
+dataset = WavDataSet(folder="WavTrain/train/",type = "train")#,transform=[RandomOffset()])
 
 train = dataset
-val = WavDataSet(folder="WavTrain/crowd/",count=2000)
+val = WavDataSet(folder="WavTrain/crowd/",type = "valid",count=2000)
 train_data = torch.utils.data.DataLoader(train,batch_size=32,collate_fn=custom_collate,shuffle=False)
 val_data = torch.utils.data.DataLoader(val,batch_size=32,collate_fn=custom_collate,shuffle=False)
 
@@ -35,9 +37,12 @@ model = SpeechRecognition()
 #model.load_state_dict(torch.load("ASR"))
 start_time = datetime.now()
 #model.validate_epoch(val_data)
+#model.train(1, train_data, val_data)
+
 try:
     model.train(1, train_data,val_data)
-except:
+except Exception as e:
+    print("Error", e)
     model.save(True)
 
 #torch.save(model.state_dict(), "ASR")

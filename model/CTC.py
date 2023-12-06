@@ -5,7 +5,11 @@ class CTCdecoder(torch.nn.Module):
     def __init__(self):
         super(CTCdecoder, self).__init__()
 
-        self.linear = torch.nn.Linear(1024,36)
+        self.linear = torch.nn.Sequential(torch.nn.Linear(1024,1024),
+                                          torch.nn.Dropout(0.1),
+                                          torch.nn.ReLU(),
+                                          torch.nn.Linear(1024,36)
+                                          )
 
     def forward(self,x):
 

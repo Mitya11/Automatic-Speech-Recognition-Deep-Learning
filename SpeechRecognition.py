@@ -7,6 +7,7 @@ import python_speech_features as pf
 import noisereduce as nr
 import random
 from matplotlib import pyplot as plt
+from utils import beam_search
 
 class SpeechRecognition:
     def __init__(self):
@@ -24,19 +25,19 @@ class SpeechRecognition:
         encoder_output, prev_hidden = self.encoder(sequence)
 
         result = []
-        prev_output = torch.nn.functional.one_hot(
-            torch.full([encoder_output.shape[0]], 34, dtype=torch.long, device=self.device), num_classes=36).to(
-            dtype=torch.float32)
+        prev_output = torch.zeros((encoder_output.shape[0])).to(self.device,torch.long)
         # rnn_input = torch.cat([output.unsqueeze(dim=1), encoder_output[:, 0:1, :]], dim=-1)
 
         hidden = [torch.zeros((1, encoder_output.shape[0], 512), device=self.device)] * 2
         result = []
-        while torch.argmax(prev_output[0:1], dim=1) != 35:
+        while prev_output != 35:
             # teacher forcing
-            output, hidden, context = self.decoder(encoder_output, prev_output, hidden)
-            result.append(torch.argmax(output[0:1], dim=1).item())
+            output, hidden, context,_ = self.decoder(encoder_output, prev_output, hidden)
+            output = beam_search(self,output,[encoder_output, prev_output, hidden],3,3)
 
-            prev_output = output
+            result.append(output.item())
+
+            prev_output = output.unsqueeze(0)
 
         return result
 
@@ -45,7 +46,7 @@ class SpeechRecognition:
         self.ctc_classifier = CTCdecoder().to(self.device)
 
         self.load(ctc_load=True)
-        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.00025)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.00075)
         torch.autograd.set_detect_anomaly(True)
 
         for epoch in range(epochesCount):
@@ -56,7 +57,8 @@ class SpeechRecognition:
             sr = 0
             for i in range(len(train_data)):
                 inputs, target, input_lengths, target_lengths = next(it)
-                inputs = inputs.to(self.device)
+                inputs = inputs.to(self.device).squeeze(dim=2)
+                print("seq len: ",inputs.shape)
                 target = target.to(self.device)
 
                 loss = torch.tensor(0, dtype=torch.float64, device=self.device)
@@ -69,9 +71,7 @@ class SpeechRecognition:
                 loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0.2
 
                 # Attention-based model
-                prev_output = torch.nn.functional.one_hot(
-                    torch.full([encoder_output.shape[0]], 34, dtype=torch.long, device=self.device), num_classes=36).to(
-                    dtype=torch.float32)
+                prev_output = torch.zeros((encoder_output.shape[0])).to(self.device,torch.long)
                 #rnn_input = torch.cat([output.unsqueeze(dim=1), encoder_output[:, 0:1, :]], dim=-1)
 
                 hidden = [torch.zeros((1,encoder_output.shape[0],512), device=self.device)]*2
@@ -82,16 +82,12 @@ class SpeechRecognition:
                     output, hidden, context , attention_score = self.decoder(encoder_output, prev_output, hidden)
                     loss += criterion_cross(output, target[:, j]).nan_to_num(0)
                     result.append(torch.argmax(output[0:1], dim=1).item())
-                    if random.randint(1, 100) < 90:
-                        output = target[:, j]
-                        output = torch.nn.functional.one_hot(
-                            output, num_classes=36).to(
-                            dtype=torch.float32)
+                    output = target[:, j]
 
                     prev_output = output
                     attention_matrix.append(attention_score[0][0])
 
-                plt.imshow(torch.stack(attention_matrix).cpu().detach())
+                #plt.imshow(torch.stack(attention_matrix).cpu().detach())
                 #plt.show()
                 from utils import alphabet
                 import itertools
@@ -106,7 +102,7 @@ class SpeechRecognition:
                 optimizer.step()
 
                 sr += float(loss)
-            print("LOSS:", sr)
+            print("LOSS:", sr/len(train_data))
             if val_data:
                 it = iter(val_data)
                 sr = 0
@@ -115,15 +111,12 @@ class SpeechRecognition:
                 with torch.no_grad():
                     for i in range(len(val_data)):
                         inputs, target, _, _ = next(it)
-                        inputs = inputs.to(self.device)
+                        inputs = inputs.to(self.device).squeeze(dim=2)
                         target = target.to(self.device)
 
                         encoder_output, prev_hidden = self.encoder(inputs)
 
-                        prev_output = torch.nn.functional.one_hot(
-                            torch.full([encoder_output.shape[0]], 34, dtype=torch.long, device=self.device),
-                            num_classes=36).to(
-                            dtype=torch.float32)
+                        prev_output = torch.zeros((encoder_output.shape[0])).to(self.device,torch.long)
                         # rnn_input = torch.cat([output.unsqueeze(dim=1), encoder_output[:, 0:1, :]], dim=-1)
 
                         hidden = [torch.zeros((1, encoder_output.shape[0], 512), device=self.device)] * 2
@@ -132,13 +125,11 @@ class SpeechRecognition:
                             # teacher forcing
                             output, hidden, context,_ = self.decoder(encoder_output, prev_output, hidden)
                             sr += criterion_cross(output, target[:, j]).nan_to_num(0)
-                            result.append(torch.argmax(output[0:1], dim=1).item())
-                            if random.randint(1, 100) < 0:
-                                output = target[:, j]
-                                output = torch.nn.functional.one_hot(
-                                    output, num_classes=36).to(
-                                    dtype=torch.float32)
+                            output_first = beam_search(self, output[0:1], [encoder_output[0:1], prev_output[0:1], hidden],
+                                                 3, 3)
+                            result.append(output_first.item())
 
+                            output = output.max(dim=1)[1]
                             prev_output = output
 
                         from utils import alphabet
@@ -147,7 +138,7 @@ class SpeechRecognition:
                         result = "".join([c for c, k in itertools.groupby(text)]).replace("-", "")
                         print(result, len(text))
                         print("                -----", "".join([alphabet[i.item()] for i in target[0]]))
-                    print("VALIDATE Loss:", sr, "")
+                    print("VALIDATE Loss:", sr/len(val_data), "")
         self.save(ctc_load=True)
 
     def load(self, ctc_load):
