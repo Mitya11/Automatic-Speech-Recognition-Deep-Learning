@@ -30,7 +30,7 @@ class SpeechRecognition:
 
         hidden = [torch.zeros((1, encoder_output.shape[0], 512), device=self.device)] * 2
         result = []
-        while prev_output != 35:
+        while prev_output != 35 and len(result) < 80:
             # teacher forcing
             output, hidden, context,_ = self.decoder(encoder_output, prev_output, hidden)
             output = beam_search(self,output,[encoder_output, prev_output, hidden],3,3)
