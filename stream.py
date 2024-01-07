@@ -11,11 +11,10 @@ from transforms import RandomOffset
 from datetime import datetime
 import librosa
 from transforms import RandomOffset
-import python_speech_features as pf
-import noisereduce as nr
 
-CHUNK = int(2*16000) # number of data points to read at a time
-RATE = 16000 # time resolution of the recording device (Hz)
+
+CHUNK = int(2*22000) # number of data points to read at a time
+RATE = 22000 # time resolution of the recording device (Hz)
 
 p=pyaudio.PyAudio() # start the PyAudio class
 stream=p.open(format=pyaudio.paInt16,channels=1,rate=RATE,input=True,
@@ -25,9 +24,11 @@ stream=p.open(format=pyaudio.paInt16,channels=1,rate=RATE,input=True,
 model = SpeechRecognition()
 model.load(False)
 with torch.no_grad():
-    for i in range(100000): #to it a few times just to see
+    for i in range(10000): #to it a few times just to see
         data = np.fromstring(stream.read(CHUNK,exception_on_overflow = False),dtype=np.int16)
-        data = data.astype(np.float32)
+        data = (data).astype(np.float32)
+        wavfile.write("karplus.wav", RATE, data)
+
         print(data)
         #data = nr.reduce_noise(data, RATE)
 

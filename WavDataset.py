@@ -3,61 +3,50 @@ import json
 from torch.utils.data import Dataset, DataLoader
 from spectrogram import get_spectrogram , get_mel_spectrogram
 from scipy.io import wavfile
-from utils import alphabet
+from utils import alphabet , get_transcript
 import matplotlib.pyplot as plt
 import os
 import random
-import librosa
 import numpy as np
 import python_speech_features as pf
 from utils import shuffle_packets
 import csv
 from tqdm import tqdm
+import base64
+import io
+import soundfile as sf
+
 class WavDataSet(Dataset):
-    def __init__(self, folder, labels_file="manifest.jsonl", transform=None,delay = 170000,count = 70000,type="train"):
+    def __init__(self, hard_path, labels_file="manifest.jsonl", transform=None,delay = 0,count = 600000,type="train"):
         self.train_data = []
         self.transform = transform
-        self.folder = folder
-        with open(folder+labels_file) as file:
-            i= 0
-            for line in file:
-                if i <delay/4:
-                    i += 1
-                    continue
-                json_line = json.loads(line)
-                if not os.path.isfile(folder+json_line["audio_filepath"]):
-                    continue
-                if float(json_line["duration"]) > 5.5 or float(json_line["duration"]) < 1:
-                    continue
-                json_line["audio_filepath"] = folder+json_line["audio_filepath"]
-                self.train_data.append(json_line)
-                i+=1
-                if i >=(count+delay)/4:
-                    break
-        self.train_data.sort(key= lambda x:x["duration"],reverse=False)
-        self.train_data = self.train_data[:len(self.train_data) - len(self.train_data) % 32]
-        if type == "train":
-            hard_path = 'F:/SpeechDataset/train/manifest.csv'
-        else:
-            delay = 0
-            hard_path = 'F:/SpeechDataset/train/manifest_test.csv'
 
-        with open(hard_path, newline='') as csvfile:
+        if type == "train":
+            pass
+        else:
+            delay = delay+count
+            count = 6000
+        with open(hard_path, newline='') as file:
             i= 0
-            opus_files = []
-            spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
-            for row in tqdm(spamreader):
-                if i <delay*3:
+            for line in tqdm(file):
+                if i < delay:
                     i += 1
                     continue
-                path , text = row
-                opus_files.append({"audio_filepath":path,"text":text,"size":os.path.getsize(path)})
+                a = line.strip()
+                data = eval(a)
+                o = data["transcript"]
+                if data["duration"] > 6:
+                    continue
+                self.train_data.append(data)
                 i += 1
-                if i >= (count+delay)*3:
+                if i +delay >= count:
                     break
-            opus_files.sort(key= lambda x: x["size"])
-        opus_files = opus_files[:len(opus_files) - len(opus_files) % 32]
-        self.train_data.extend(opus_files)
+
+        # noise generating
+        for i in range(int(count * 0.1)):
+            self.train_data.append({"text": "noise", "audio":None, "duration": random.uniform(1,5)})
+        self.train_data.sort(key = lambda x:float(x["duration"]))
+        self.train_data = self.train_data[:len(self.train_data) - len(self.train_data)%32]
         self.train_data = shuffle_packets(self.train_data,32)
 
         #self.train_data = self.train_data[:512]
@@ -72,19 +61,25 @@ class WavDataSet(Dataset):
             idx = idx.tolist()
         if idx == 4051:
             k = 0
-        file = self.train_data[idx]["audio_filepath"]
+        data = self.train_data[idx]
 
-        if file[-4:] == ".wav":
-            freq, samp = wavfile.read(file, "r")
+        text = data["text"]
+        if text == "noise":
+            samp, freq = np.random.normal(0,random.uniform(0,50), int(22000*float(data["duration"]))).astype(np.float32), 22000
+            text = ""
+            transcript = [178]
         else:
-            samp, freq = librosa.load(file,
-                                      res_type='scipy')
-            samp = (samp * 32767).astype(np.float64)
+            audio = io.BytesIO(base64.b64decode(data["audio"]))
+            duration = data["duration"]
+            transcript = data["transcript"]
+
+            samp, freq = sf.read(audio, dtype='int16')
+            samp = (samp).astype(np.float32)
 
         if self.transform:
             for transform in self.transform:
                 samp = transform(samp)
-        samp = np.array(samp,dtype=np.float64)
+        samp = np.array(samp,dtype=np.float32)
         n_fft = 512
         hop = 160
         mfcc = pf.mfcc(samp, freq, nfilt=40,nfft=350,winlen=0.015,winstep=0.01)
@@ -111,10 +106,6 @@ class WavDataSet(Dataset):
         #sequence = sequence / m *2
         #sequence = torch.squeeze(sequence)
         assert sequence.isnan().any().item() == 0
-        target = []
-        for i in self.train_data[idx]["text"]:
-            if i in alphabet:
-                target.append(alphabet[i])
-        target = torch.tensor(target[:80]+[35])
+        target = torch.tensor(transcript)
 
-        return sequence[:600], target
+        return sequence[:1300], target[:180]

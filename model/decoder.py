@@ -11,11 +11,11 @@ class Attention(torch.nn.Module):
     def forward(self, decoder_state, listener_feature):
         con_decoder_state = self.decode(decoder_state[0].transpose(0,1))
         con_listener_feature = self.encode(listener_feature)
-        p = con_listener_feature[0].cpu().detach().numpy()
 
 
         energy = self.attent_weights(torch.nn.functional.tanh(con_decoder_state+con_listener_feature)).squeeze(-1)
         attention_score = [self.softmax(energy)]
+        l = attention_score[0][0]
         context = torch.sum(listener_feature * attention_score[0].unsqueeze(2).repeat(1, 1, listener_feature.size(2)),
                             dim=1)
         return attention_score, context
@@ -26,7 +26,7 @@ class DecoderNN(torch.nn.Module):
         super(DecoderNN, self).__init__()
         self.hidden_size = hidden_size
         self.rnn_layer_count = rnn_layer_count
-        self.character_emb = torch.nn.Embedding(36,128)
+        self.character_emb = torch.nn.Embedding(180,128)
 
         # Attention
         self.attention = Attention()
@@ -34,10 +34,10 @@ class DecoderNN(torch.nn.Module):
         self.character_distribution = torch.nn.Sequential(torch.nn.Linear(1536,  768),
                                                           torch.nn.Dropout(0.0),
                                                           torch.nn.ReLU(),
-                                                          torch.nn.Linear(768,36))
+                                                          torch.nn.Linear(768,179))
 
     def forward(self, listener_feature, prev_output, hidden_state):
-        prev_output = self.character_emb(prev_output) # delete dropout after
+        prev_output = torch.nn.functional.dropout(self.character_emb(prev_output),0.0) # delete dropout after
         attention_score, context = self.attention(hidden_state, listener_feature)
         rnn_input = torch.cat([prev_output, context], dim=-1).unsqueeze(dim=1)
 
