@@ -1,3 +1,4 @@
+import librosa
 import torch
 import json
 from torch.utils.data import Dataset, DataLoader
@@ -15,7 +16,7 @@ from tqdm import tqdm
 import base64
 import io
 import soundfile as sf
-
+import torchaudio
 class WavDataSet(Dataset):
     def __init__(self, hard_path, labels_file="manifest.jsonl", transform=None,delay = 0,count = 600000,type="train"):
         self.train_data = []
@@ -43,7 +44,7 @@ class WavDataSet(Dataset):
                     break
 
         # noise generating
-        for i in range(int(count * 0.1)):
+        for i in range(int(count * 0.05)):
             self.train_data.append({"text": "noise", "audio":None, "duration": random.uniform(1,5)})
         self.train_data.sort(key = lambda x:float(x["duration"]))
         self.train_data = self.train_data[:len(self.train_data) - len(self.train_data)%32]
@@ -68,44 +69,21 @@ class WavDataSet(Dataset):
             samp, freq = np.random.normal(0,random.uniform(0,50), int(22000*float(data["duration"]))).astype(np.float32), 22000
             text = ""
             transcript = [178]
+            samp = torch.tensor([[np.squeeze(samp)]]).to(torch.float32)
         else:
             audio = io.BytesIO(base64.b64decode(data["audio"]))
             duration = data["duration"]
             transcript = data["transcript"]
 
-            samp, freq = sf.read(audio, dtype='int16')
-            samp = (samp).astype(np.float32)
+            samp, freq = sf.read(audio, dtype='float32')
+            samp = torch.tensor([[np.squeeze(samp)]]).to(torch.float32)
 
         if self.transform:
             for transform in self.transform:
                 samp = transform(samp)
-        samp = np.array(samp,dtype=np.float32)
-        n_fft = 512
-        hop = 160
-        mfcc = pf.mfcc(samp, freq, nfilt=40,nfft=350,winlen=0.015,winstep=0.01)
-        delta_mfcc = pf.delta(mfcc,2)
-        a_mfcc = pf.delta(delta_mfcc,2)
-        features = torch.tensor(np.concatenate([mfcc,delta_mfcc,a_mfcc],axis=1))
+        samp = torch.tensor(samp[0][0])
 
-
-
-
-        #spectrogram = torch.tensor(get_mel_spectrogram(samp, freq))
-        """plt.imshow(spectrogram.transpose(0,1), origin = "lower")
-        plt.show()"""
-        sequence = torch.split(features, split_size)
-
-        if sequence[-1].size()[0] != split_size:
-            sequence = sequence[:-1]
-
-        sequence =torch.stack(sequence)
-        #standarize
-        #l = sequence.min()[0]
-        #m = sequence.max()[0]
-        #sequence -=l
-        #sequence = sequence / m *2
-        #sequence = torch.squeeze(sequence)
-        assert sequence.isnan().any().item() == 0
+        assert samp.isnan().any().item() == 0
         target = torch.tensor(transcript)
 
-        return sequence[:1300], target[:180]
+        return samp[:freq*10], target[:180]

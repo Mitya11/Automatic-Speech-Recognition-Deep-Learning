@@ -6,7 +6,7 @@ import numpy as np
 
 import random
 from matplotlib import pyplot as plt
-from utils import beam_search
+from utils import beam_search,get_features
 
 class SpeechRecognition:
     def __init__(self):
@@ -47,7 +47,7 @@ class SpeechRecognition:
     def train(self, epochesCount, train_data, val_data=None):
         self.ctc_classifier = CTCdecoder().to(self.device)
         self.load(ctc_load=True)
-        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.00045)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.00055)
         torch.autograd.set_detect_anomaly(True)
 
         for epoch in range(epochesCount):
@@ -58,7 +58,8 @@ class SpeechRecognition:
             sr = 0
             for i in range(len(train_data)):
                 inputs, target, input_lengths, target_lengths = next(it)
-                inputs = inputs.to(self.device).squeeze(dim=2)
+                inputs,input_lengths = get_features(inputs,16000)
+                inputs = inputs.to(self.device).squeeze(dim=2).transpose(0,1)
                 print("seq len: ",inputs.shape)
                 target = target.to(self.device)
 
@@ -100,13 +101,19 @@ class SpeechRecognition:
                 print(result, len(text), "Completed:", round(i / len(train_data) * 100, 4), "%")
                 print("           -----", "".join([transcript[i.item()] for i in target[0]]))
 
-                loss.backward()
+                try:
+                    loss.backward()
+                except:
+                    print("ERROR! Lose is :",loss)
+                    print("ERROR! Tens is :", inputs)
+                    continue
                 print(torch.nn.utils.clip_grad_norm_(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()), 1))
                 # print(self.encoder.lstm1.all_weights[0][0].grad)
                 optimizer.step()
 
                 sr += float(loss)
             print("LOSS:", sr/len(train_data))
+            final_loss = sr/len(train_data)
             if val_data:
                 it = iter(val_data)
                 sr = 0
@@ -115,7 +122,8 @@ class SpeechRecognition:
                 with torch.no_grad():
                     for i in range(len(val_data)):
                         inputs, target, _, _ = next(it)
-                        inputs = inputs.to(self.device).squeeze(dim=2)
+                        inputs, input_lengths = get_features(inputs, 16000)
+                        inputs = inputs.to(self.device).squeeze(dim=2).transpose(0, 1)
                         target = target.to(self.device)
 
                         encoder_output, prev_hidden = self.encoder(inputs)
@@ -144,7 +152,7 @@ class SpeechRecognition:
                         print("                -----", "".join([transcript[i.item()] for i in target[0]]))
                     print("VALIDATE Loss:", sr/len(val_data), "")
         self.save(ctc_load=True)
-
+        return final_loss
     def load(self, ctc_load):
         self.encoder.load_state_dict(torch.load("C:/Users/mitya/PycharmProjects/Automatic-Speech-Recognition-Deep-Learning/trained_param/encoder_params"))
         self.decoder.load_state_dict(torch.load("C:/Users/mitya/PycharmProjects/Automatic-Speech-Recognition-Deep-Learning/trained_param/decoder_params"))

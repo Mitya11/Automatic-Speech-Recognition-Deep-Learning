@@ -1,9 +1,12 @@
 import torch
 import itertools
-import python_speech_features as pf
 import numpy as np
 import random
+import python_speech_features_cuda as pfc
+import python_speech_features as pf
+
 from ru_transcript import RuTranscript
+import torchaudio
 
 alphabet = {'а': 1, 'б': 2, 'в': 3, 'г': 4, 'д': 5, 'е': 6, 'ё': 6, 'ж': 7, 'з': 8, 'и': 9, 'й': 10, 'к': 11, 'л': 12,
             'м': 13,
@@ -61,12 +64,21 @@ def decode_result(nn_output):
 def get_features(samp, freq):
     split_size = 1
 
-    n_fft = 512
-    hop = 160
-    mfcc = pf.mfcc(samp, freq, nfilt=40, nfft=350, winlen=0.015, winstep=0.01)
-    delta_mfcc = pf.delta(mfcc, 2)
-    a_mfcc = pf.delta(delta_mfcc, 2)
-    features = torch.tensor(np.concatenate([mfcc, delta_mfcc, a_mfcc], axis=1))
+    pfc.env.backend = np
+    pfc.env.dtype = np.float32
+    np.int = int
+
+    samp = samp.transpose(0,1).numpy().astype(np.float32)
+    mfcc = []
+    lengths= []
+    for i in range(samp.shape[0]):
+        mfcc.append(pf.mfcc(samp[i], freq, nfilt=40, nfft=350, winlen=0.015, winstep=0.01))
+        lengths.append(mfcc[-1].shape[0])
+    #mfcc = pf.mfcc(samp, freq, nfilt=40, nfft=350, winlen=0.015, winstep=0.01)
+    mfcc = np.stack(mfcc).astype(np.float32)
+    delta_mfcc = pfc.delta(mfcc, 2)
+    a_mfcc = pfc.delta(delta_mfcc, 2)
+    features = torch.tensor(np.concatenate([mfcc, delta_mfcc, a_mfcc], axis=2))
 
     # spectrogram = torch.tensor(get_mel_spectrogram(samp, freq))
     """plt.imshow(spectrogram.transpose(0,1), origin = "lower")
@@ -83,7 +95,7 @@ def get_features(samp, freq):
     # sequence /= 20
     sequence = torch.squeeze(sequence)
     assert sequence.isnan().any().item() == 0
-    return sequence
+    return sequence,torch.tensor(lengths)
 
 
 def beam_search(model, prev_output, args, depth, width):

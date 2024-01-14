@@ -1,6 +1,7 @@
 import random
 import numpy as np
-
+import torchaudio
+import torch
 class RandomOffset:
     def __call__(self,wave):
         try:
@@ -16,3 +17,13 @@ class RandomNoise:
         noise = np.random.normal(0,50,wave.size)
         noise *= np.interp(range(wave.size),np.linspace(0,wave.size,period),multypliers)
         return wave+noise
+
+class RoomReverb:
+    def __call__(self,wave,power = 1):
+        from torchaudio.utils import download_asset
+
+        rir_raw, sample_rate = torchaudio.load("augmentation/S1R2_sweep4000.wav")
+        rir = rir_raw[:, int(sample_rate * 0.01): int(sample_rate * 1.3)][0]
+        rir = rir / torch.linalg.vector_norm(rir, ord=2)
+        o =torchaudio.functional.fftconvolve(wave,rir,mode="full")
+        return torchaudio.functional.fftconvolve(wave,rir,mode="full")
