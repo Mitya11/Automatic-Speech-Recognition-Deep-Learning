@@ -7,6 +7,7 @@ import numpy as np
 import random
 from matplotlib import pyplot as plt
 from utils import beam_search,get_features
+from torch_audiomentations  import *
 
 class SpeechRecognition:
     def __init__(self):
@@ -47,8 +48,15 @@ class SpeechRecognition:
     def train(self, epochesCount, train_data, val_data=None):
         self.ctc_classifier = CTCdecoder().to(self.device)
         self.load(ctc_load=True)
-        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.00055)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.0009)
         torch.autograd.set_detect_anomaly(True)
+
+        transforms = [PitchShift(-2, 2, p=0.3, sample_rate=16000,mode="per_example",p_mode="per_example"),
+                      AddBackgroundNoise(
+                          "C:/Users/mitya/PycharmProjects/Automatic-Speech-Recognition-Deep-Learning/augmentation/", 14,
+                          21, sample_rate=16000, p=0.3,mode="per_example",p_mode="per_example"),
+                      Gain(-10, 10, p=0.3,mode="per_example",p_mode="per_example"),
+                      PolarityInversion(p=0.3,mode="per_example",p_mode="per_example")]
 
         for epoch in range(epochesCount):
             print("Epoch:", epoch + 1)
@@ -58,6 +66,15 @@ class SpeechRecognition:
             sr = 0
             for i in range(len(train_data)):
                 inputs, target, input_lengths, target_lengths = next(it)
+                inputs = inputs.to(self.device).unsqueeze(1).transpose(0, 2)
+                try:
+                    if transforms:
+                        for transform in transforms:
+                            inputs = transform(inputs)
+                except:
+                    pass
+
+                inputs = inputs.cpu().squeeze(1).transpose(0,1)
                 inputs,input_lengths = get_features(inputs,16000)
                 inputs = inputs.to(self.device).squeeze(dim=2).transpose(0,1)
                 print("seq len: ",inputs.shape)
@@ -70,7 +87,7 @@ class SpeechRecognition:
                 # CTC-based model
                 ctc_output = self.ctc_classifier(encoder_output)
                 input_lengths = input_lengths // 8
-                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0.2
+                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0
 
                 # Attention-based model
                 prev_output = torch.zeros((encoder_output.shape[0])).to(self.device,torch.long)
@@ -112,13 +129,13 @@ class SpeechRecognition:
                 optimizer.step()
 
                 sr += float(loss)
-            print("LOSS:", sr/len(train_data))
+            print("LOSS:", sr / len(train_data))
             final_loss = sr/len(train_data)
             if val_data:
                 it = iter(val_data)
                 sr = 0
+                cer_loss = 0
                 NLL = torch.nn.CrossEntropyLoss(ignore_index=0)
-
                 with torch.no_grad():
                     for i in range(len(val_data)):
                         inputs, target, _, _ = next(it)
@@ -148,9 +165,17 @@ class SpeechRecognition:
                         import itertools
                         text = "".join(list(map(lambda x: transcript[x], result)))
                         result = "".join([c for c, k in itertools.groupby(text)]).replace("-", "")
+                        true_pred = "".join([transcript[i.item()] for i in target[0]])
+
                         print(result, len(text))
-                        print("                -----", "".join([transcript[i.item()] for i in target[0]]))
-                    print("VALIDATE Loss:", sr/len(val_data), "")
+                        print("                -----", true_pred)
+
+                        import torchmetrics
+                        cer = torchmetrics.CharErrorRate()
+
+                        cer_loss += cer(result, true_pred)
+                    print("VALIDATE Loss:", sr / len(val_data), "")
+                    print("VALIDATE CER:", cer_loss / len(val_data), "")
         self.save(ctc_load=True)
         return final_loss
     def load(self, ctc_load):

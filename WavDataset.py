@@ -26,7 +26,7 @@ class WavDataSet(Dataset):
             pass
         else:
             delay = delay+count
-            count = 6000
+            count = 25000
         with open(hard_path, newline='') as file:
             i= 0
             for line in tqdm(file):
@@ -44,9 +44,9 @@ class WavDataSet(Dataset):
                     break
 
         # noise generating
-        for i in range(int(count * 0.05)):
+        for i in range(int(count * 0.00)):
             self.train_data.append({"text": "noise", "audio":None, "duration": random.uniform(1,5)})
-        self.train_data.sort(key = lambda x:float(x["duration"]))
+        self.train_data.sort(key = lambda x:len(x["text"]))
         self.train_data = self.train_data[:len(self.train_data) - len(self.train_data)%32]
         self.train_data = shuffle_packets(self.train_data,32)
 
@@ -76,14 +76,13 @@ class WavDataSet(Dataset):
             transcript = data["transcript"]
 
             samp, freq = sf.read(audio, dtype='float32')
+            assert freq ==16000
             samp = torch.tensor([[np.squeeze(samp)]]).to(torch.float32)
 
-        if self.transform:
-            for transform in self.transform:
-                samp = transform(samp)
+
         samp = torch.tensor(samp[0][0])
 
         assert samp.isnan().any().item() == 0
         target = torch.tensor(transcript)
 
-        return samp[:freq*10], target[:180]
+        return samp[:freq*10], target[:280]

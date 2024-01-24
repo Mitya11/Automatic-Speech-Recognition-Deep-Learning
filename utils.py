@@ -72,13 +72,14 @@ def get_features(samp, freq):
     mfcc = []
     lengths= []
     for i in range(samp.shape[0]):
-        mfcc.append(pf.mfcc(samp[i], freq, nfilt=40, nfft=350, winlen=0.015, winstep=0.01))
+        mfcc.append(pf.mfcc(samp[i], freq, winlen=0.025, winstep=0.01, numcep = 30, nfilt=40,
+	preemph=0.97, appendEnergy=True))
         lengths.append(mfcc[-1].shape[0])
     #mfcc = pf.mfcc(samp, freq, nfilt=40, nfft=350, winlen=0.015, winstep=0.01)
     mfcc = np.stack(mfcc).astype(np.float32)
-    delta_mfcc = pfc.delta(mfcc, 2)
-    a_mfcc = pfc.delta(delta_mfcc, 2)
-    features = torch.tensor(np.concatenate([mfcc, delta_mfcc, a_mfcc], axis=2))
+    d_mfcc = pfc.delta(mfcc, 2)
+    a_mfcc = pfc.delta(d_mfcc, 2)
+    features = torch.tensor(np.concatenate([mfcc, d_mfcc, a_mfcc], axis=2))
 
     # spectrogram = torch.tensor(get_mel_spectrogram(samp, freq))
     """plt.imshow(spectrogram.transpose(0,1), origin = "lower")
