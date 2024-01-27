@@ -31,13 +31,13 @@ class SpeechRecognition:
         hidden = [torch.zeros((1, encoder_output.shape[0], 512), device=self.device)] * 2
         result = []
         attention_matrix = []
-        while prev_output != 178 and len(result) < 80:
+        while prev_output != 33 and len(result) < 80:
             # teacher forcing
             output, hidden, context,attention_score = self.decoder(encoder_output, prev_output, hidden)
             output = beam_search(self, output[0:1], [encoder_output[0:1], prev_output[0:1], hidden],
                                        3, 3)
 
-            result.append(output.item())
+            result.append(output.item()+1)
 
             prev_output = output.unsqueeze(0)
             attention_matrix.append(attention_score[0][0].cpu().detach().numpy())
@@ -48,7 +48,7 @@ class SpeechRecognition:
     def train(self, epochesCount, train_data, val_data=None):
         self.ctc_classifier = CTCdecoder().to(self.device)
         self.load(ctc_load=True)
-        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.0009)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.0002)
         torch.autograd.set_detect_anomaly(True)
 
         transforms = [PitchShift(-2, 2, p=0.3, sample_rate=16000,mode="per_example",p_mode="per_example"),
@@ -61,14 +61,14 @@ class SpeechRecognition:
         for epoch in range(epochesCount):
             print("Epoch:", epoch + 1)
             it = iter(train_data)
-            criterion_cross = torch.nn.CrossEntropyLoss(ignore_index=179)
-            criterion_ctc = torch.nn.CTCLoss(blank=179, reduction='sum', zero_infinity=True)
+            criterion_cross = torch.nn.CrossEntropyLoss(ignore_index=34)
+            criterion_ctc = torch.nn.CTCLoss(blank=0, reduction='sum', zero_infinity=True)
             sr = 0
             for i in range(len(train_data)):
                 inputs, target, input_lengths, target_lengths = next(it)
                 inputs = inputs.to(self.device).unsqueeze(1).transpose(0, 2)
                 try:
-                    if transforms:
+                    if not transforms:
                         for transform in transforms:
                             inputs = transform(inputs)
                 except:
@@ -84,10 +84,11 @@ class SpeechRecognition:
                 optimizer.zero_grad()
 
                 encoder_output, prev_hidden = self.encoder(inputs)
+                p = encoder_output.cpu().detach().numpy()
                 # CTC-based model
                 ctc_output = self.ctc_classifier(encoder_output)
                 input_lengths = input_lengths // 8
-                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0
+                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0.005
 
                 # Attention-based model
                 prev_output = torch.zeros((encoder_output.shape[0])).to(self.device,torch.long)
@@ -96,11 +97,12 @@ class SpeechRecognition:
                 hidden = [torch.zeros((1,encoder_output.shape[0],512), device=self.device)]*2
                 result = []
                 attention_matrix = []
+                target = target-1
                 for j in range(target.size()[1]):
                     # teacher forcing
                     output, hidden, context , attention_score = self.decoder(encoder_output, prev_output, hidden)
                     loss += criterion_cross(output, target[:, j]).nan_to_num(0)
-                    result.append(torch.argmax(output[0:1], dim=1).item())
+                    result.append(torch.argmax(output[0:1], dim=1).item()+1)
                     if random.randint(1, 100) < 80:
                         output = target[:, j]
                     else:
@@ -111,12 +113,12 @@ class SpeechRecognition:
 
                 #plt.imshow(torch.stack(attention_matrix).cpu().detach())
                 #plt.show()
-                from utils import transcript
+                from utils import transcript,alphabet
                 import itertools
-                text = "".join(list(map(lambda x: transcript[x], result)))
+                text = "".join(list(map(lambda x: alphabet[x], result)))
                 result = "".join([c for c, k in itertools.groupby(text)]).replace("-", "")
                 print(result, len(text), "Completed:", round(i / len(train_data) * 100, 4), "%")
-                print("           -----", "".join([transcript[i.item()] for i in target[0]]))
+                print("           -----", "".join([alphabet[i.item()+1] for i in target[0]]))
 
                 try:
                     loss.backward()
@@ -124,7 +126,7 @@ class SpeechRecognition:
                     print("ERROR! Lose is :",loss)
                     print("ERROR! Tens is :", inputs)
                     continue
-                print(torch.nn.utils.clip_grad_norm_(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()), 1))
+                #print(torch.nn.utils.clip_grad_norm_(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()), 1))
                 # print(self.encoder.lstm1.all_weights[0][0].grad)
                 optimizer.step()
 
@@ -141,7 +143,7 @@ class SpeechRecognition:
                         inputs, target, _, _ = next(it)
                         inputs, input_lengths = get_features(inputs, 16000)
                         inputs = inputs.to(self.device).squeeze(dim=2).transpose(0, 1)
-                        target = target.to(self.device)
+                        target = target.to(self.device)-1
 
                         encoder_output, prev_hidden = self.encoder(inputs)
 
@@ -156,16 +158,16 @@ class SpeechRecognition:
                             sr += criterion_cross(output, target[:, j]).nan_to_num(0)
                             output_first = beam_search(self, output[0:1], [encoder_output[0:1], prev_output[0:1], hidden],
                                                  3, 3)
-                            result.append(output_first.item())
+                            result.append(output_first.item()+1)
 
                             output = output.max(dim=1)[1]
                             prev_output = output
 
-                        from utils import transcript
+                        from utils import alphabet
                         import itertools
-                        text = "".join(list(map(lambda x: transcript[x], result)))
+                        text = "".join(list(map(lambda x: alphabet[x], result)))
                         result = "".join([c for c, k in itertools.groupby(text)]).replace("-", "")
-                        true_pred = "".join([transcript[i.item()] for i in target[0]])
+                        true_pred = "".join([alphabet[i.item()+1] for i in target[0]])
 
                         print(result, len(text))
                         print("                -----", true_pred)

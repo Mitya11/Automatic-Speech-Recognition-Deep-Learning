@@ -26,7 +26,7 @@ class DecoderNN(torch.nn.Module):
         super(DecoderNN, self).__init__()
         self.hidden_size = hidden_size
         self.rnn_layer_count = rnn_layer_count
-        self.character_emb = torch.nn.Embedding(180,128)
+        self.character_emb = torch.nn.Embedding(35,128)
 
         # Attention
         self.attention = Attention()
@@ -34,7 +34,7 @@ class DecoderNN(torch.nn.Module):
         self.character_distribution = torch.nn.Sequential(torch.nn.Linear(1536,  768),
                                                           torch.nn.Dropout(0.0),
                                                           torch.nn.ReLU(),
-                                                          torch.nn.Linear(768,179))
+                                                          torch.nn.Linear(768,34))
 
     def forward(self, listener_feature, prev_output, hidden_state):
         prev_output = torch.nn.functional.dropout(self.character_emb(prev_output),0.0) # delete dropout after

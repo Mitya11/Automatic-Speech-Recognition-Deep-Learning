@@ -8,7 +8,7 @@ class CTCdecoder(torch.nn.Module):
         self.linear = torch.nn.Sequential(torch.nn.Linear(1024,1024),
                                           torch.nn.Dropout(0.0),
                                           torch.nn.ReLU(),
-                                          torch.nn.Linear(1024,180)
+                                          torch.nn.Linear(1024,35)
                                           )
 
     def forward(self,x):

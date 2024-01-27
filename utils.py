@@ -14,7 +14,7 @@ alphabet = {'а': 1, 'б': 2, 'в': 3, 'г': 4, 'д': 5, 'е': 6, 'ё': 6, 'ж':
             'щ': 26, 'ъ': 27, 'ы': 28, 'ь': 29, 'э': 30, 'ю': 31, 'я': 32, " ": 33, 1: 'а', 2: 'б', 3: 'в', 4: 'г',
             5: 'д', 6: 'е', 7: 'ж', 8: 'з', 9: 'и', 10: 'й', 11: 'к', 12: 'л', 13: 'м', 14: 'н', 15: 'о', 16: 'п',
             17: 'р', 18: 'с', 19: 'т', 20: 'у', 21: 'ф', 22: 'х', 23: 'ц', 24: 'ч', 25: 'ш', 26: 'щ', 27: 'ъ', 28: 'ы',
-            29: 'ь', 30: 'э', 31: 'ю', 32: 'я', 33: " ", 0: "-", 34: "", 35: "|"}
+            29: 'ь', 30: 'э', 31: 'ю', 32: 'я', 33: " ", 0: "-", 35: "", 34: "|"}
 
 transcript = {0: 'a', 1: 'ɑ', 2: 'æ', 3: 'æ.', 4: 'ɐ.', 5: 'ɐ', 6: 'ə', 7: 'ʌ', 8: 'b', 9: 'bʷ', 10: 'bː', 11: 'bːʷ',
               12: 'bˠ', 13: 'bʲ', 14: 'bᶣ', 15: 'v', 16: 'vʷ', 17: 'vˠ', 18: 'vʲ', 19: 'vᶣ', 20: 'ɡ', 21: 'ɡʷ',
@@ -56,7 +56,7 @@ transcript = {0: 'a', 1: 'ɑ', 2: 'æ', 3: 'æ.', 4: 'ɐ.', 5: 'ɐ', 6: 'ə', 7:
 
 
 def decode_result(nn_output):
-    text = "".join(list(map(lambda x: transcript[x], nn_output)))
+    text = "".join(list(map(lambda x: alphabet[x], nn_output)))
     result = "".join([c for c, k in itertools.groupby(text)]).replace("-", "")
     return result
 
@@ -117,7 +117,7 @@ def beam_search(model, prev_output, args, depth, width):
             pr_output = torch.nn.functional.softmax(pr_output, dim=-1)[0]
             arg_c[2] = hidden
             output = torch.argmax(pr_output)
-            prohability[i] *= pr_output[output]
+            prohability[i] = prohability[i] * pr_output[output]
     return candidate[torch.argmax(prohability)]
 
 

@@ -83,6 +83,10 @@ class WavDataSet(Dataset):
         samp = torch.tensor(samp[0][0])
 
         assert samp.isnan().any().item() == 0
-        target = torch.tensor(transcript)
+        target = []
+        for i in text:
+            if i in alphabet:
+                target.append(alphabet[i])
+        target = torch.tensor(target+[34])       #torch.tensor(transcript)
 
         return samp[:freq*10], target[:280]
