@@ -46,7 +46,7 @@ class WavDataSet(Dataset):
         # noise generating
         for i in range(int(count * 0.00)):
             self.train_data.append({"text": "noise", "audio":None, "duration": random.uniform(1,5)})
-        self.train_data.sort(key = lambda x:len(x["text"]))
+        self.train_data.sort(key = lambda x:x["duration"])
         self.train_data = self.train_data[:len(self.train_data) - len(self.train_data)%32]
         self.train_data = shuffle_packets(self.train_data,32)
 

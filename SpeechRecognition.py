@@ -48,13 +48,13 @@ class SpeechRecognition:
     def train(self, epochesCount, train_data, val_data=None):
         self.ctc_classifier = CTCdecoder().to(self.device)
         self.load(ctc_load=True)
-        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.0002)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.0001)
         torch.autograd.set_detect_anomaly(True)
 
         transforms = [PitchShift(-2, 2, p=0.3, sample_rate=16000,mode="per_example",p_mode="per_example"),
                       AddBackgroundNoise(
                           "C:/Users/mitya/PycharmProjects/Automatic-Speech-Recognition-Deep-Learning/augmentation/", 14,
-                          21, sample_rate=16000, p=0.3,mode="per_example",p_mode="per_example"),
+                          21, sample_rate=16000, p=0.4,mode="per_example",p_mode="per_example"),
                       Gain(-10, 10, p=0.3,mode="per_example",p_mode="per_example"),
                       PolarityInversion(p=0.3,mode="per_example",p_mode="per_example")]
 
@@ -65,10 +65,11 @@ class SpeechRecognition:
             criterion_ctc = torch.nn.CTCLoss(blank=0, reduction='sum', zero_infinity=True)
             sr = 0
             for i in range(len(train_data)):
+                break
                 inputs, target, input_lengths, target_lengths = next(it)
                 inputs = inputs.to(self.device).unsqueeze(1).transpose(0, 2)
                 try:
-                    if not transforms:
+                    if transforms:
                         for transform in transforms:
                             inputs = transform(inputs)
                 except:
@@ -88,7 +89,7 @@ class SpeechRecognition:
                 # CTC-based model
                 ctc_output = self.ctc_classifier(encoder_output)
                 input_lengths = input_lengths // 8
-                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0.005
+                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0.001
 
                 # Attention-based model
                 prev_output = torch.zeros((encoder_output.shape[0])).to(self.device,torch.long)
