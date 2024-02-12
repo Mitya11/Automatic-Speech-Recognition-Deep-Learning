@@ -16,7 +16,7 @@ sampling_rate, data = wavfile.read("karplus.wav")
 data = torch.tensor(data,dtype=torch.float32).unsqueeze(0)
 model = SpeechRecognition()
 model.load(False)
-#data = nr.reduce_noise(data, sampling_rate,prop_decrease=0.3)
+#data = torch.tensor(nr.reduce_noise(data.numpy(), sampling_rate,prop_decrease=0.9))
 
 features = get_features(data.transpose(0,1),sampling_rate)[0].unsqueeze(dim=1).to(torch.float32).cuda()
 

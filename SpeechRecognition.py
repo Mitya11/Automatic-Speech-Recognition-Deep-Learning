@@ -48,15 +48,15 @@ class SpeechRecognition:
     def train(self, epochesCount, train_data, val_data=None):
         self.ctc_classifier = CTCdecoder().to(self.device)
         self.load(ctc_load=True)
-        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.0001)
+        optimizer = torch.optim.Adam(list(self.decoder.parameters()) + list(self.encoder.parameters()) + list(self.ctc_classifier.parameters()),lr=0.00007)
         torch.autograd.set_detect_anomaly(True)
 
-        transforms = [PitchShift(-2, 2, p=0.3, sample_rate=16000,mode="per_example",p_mode="per_example"),
+        transforms = [PitchShift(-2, 2, p=0.85, sample_rate=16000,mode="per_example",p_mode="per_example"),
                       AddBackgroundNoise(
-                          "C:/Users/mitya/PycharmProjects/Automatic-Speech-Recognition-Deep-Learning/augmentation/", 14,
-                          21, sample_rate=16000, p=0.4,mode="per_example",p_mode="per_example"),
-                      Gain(-10, 10, p=0.3,mode="per_example",p_mode="per_example"),
-                      PolarityInversion(p=0.3,mode="per_example",p_mode="per_example")]
+                          "C:/Users/mitya/PycharmProjects/Automatic-Speech-Recognition-Deep-Learning/augmentation/", 13,
+                          21, sample_rate=16000, p=0.85,mode="per_example",p_mode="per_example"),
+                      #Gain(-10, 10, p=0.8,mode="per_example",p_mode="per_example"),
+                      PolarityInversion(p=0.85,mode="per_example",p_mode="per_example")]
 
         for epoch in range(epochesCount):
             print("Epoch:", epoch + 1)
@@ -65,18 +65,19 @@ class SpeechRecognition:
             criterion_ctc = torch.nn.CTCLoss(blank=0, reduction='sum', zero_infinity=True)
             sr = 0
             for i in range(len(train_data)):
-                break
                 inputs, target, input_lengths, target_lengths = next(it)
                 inputs = inputs.to(self.device).unsqueeze(1).transpose(0, 2)
+
                 try:
                     if transforms:
                         for transform in transforms:
                             inputs = transform(inputs)
                 except:
                     pass
+                sample_rate = random.randint(16000, 17200)
 
                 inputs = inputs.cpu().squeeze(1).transpose(0,1)
-                inputs,input_lengths = get_features(inputs,16000)
+                inputs,input_lengths = get_features(inputs,sample_rate)
                 inputs = inputs.to(self.device).squeeze(dim=2).transpose(0,1)
                 print("seq len: ",inputs.shape)
                 target = target.to(self.device)
@@ -89,7 +90,7 @@ class SpeechRecognition:
                 # CTC-based model
                 ctc_output = self.ctc_classifier(encoder_output)
                 input_lengths = input_lengths // 8
-                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0.001
+                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0.000
 
                 # Attention-based model
                 prev_output = torch.zeros((encoder_output.shape[0])).to(self.device,torch.long)
@@ -104,7 +105,7 @@ class SpeechRecognition:
                     output, hidden, context , attention_score = self.decoder(encoder_output, prev_output, hidden)
                     loss += criterion_cross(output, target[:, j]).nan_to_num(0)
                     result.append(torch.argmax(output[0:1], dim=1).item()+1)
-                    if random.randint(1, 100) < 80:
+                    if random.randint(1, 100) < 40:
                         output = target[:, j]
                     else:
                         output = output.max(dim=1)[1]
