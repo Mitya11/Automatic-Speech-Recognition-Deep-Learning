@@ -3,7 +3,8 @@ from model.CTC import CTCdecoder
 from model.decoder import DecoderNN
 from model.encoder import EncoderNN
 import numpy as np
-
+import soundfile as sf
+import scipy
 import random
 from matplotlib import pyplot as plt
 from utils import beam_search,get_features
@@ -57,15 +58,21 @@ class SpeechRecognition:
                           21, sample_rate=16000, p=0.85,mode="per_example",p_mode="per_example"),
                       #Gain(-10, 10, p=0.8,mode="per_example",p_mode="per_example"),
                       PolarityInversion(p=0.85,mode="per_example",p_mode="per_example")]
+        impact, freq = sf.read("C:/Users/mitya/PycharmProjects/Automatic-Speech-Recognition-Deep-Learning/S1R1_sweep4000.wav", dtype='float32')
 
         for epoch in range(epochesCount):
             print("Epoch:", epoch + 1)
             it = iter(train_data)
-            criterion_cross = torch.nn.CrossEntropyLoss(ignore_index=34)
+            criterion_cross = torch.nn.CrossEntropyLoss(ignore_index=34,label_smoothing=0.2)
             criterion_ctc = torch.nn.CTCLoss(blank=0, reduction='sum', zero_infinity=True)
             sr = 0
             for i in range(len(train_data)):
                 inputs, target, input_lengths, target_lengths = next(it)
+
+                for j in range(inputs.shape[1]):
+                    if random.randint(1, 100) < 70:
+                        inputs[:,j] = inputs[:,j]*0.97 + torch.tensor(scipy.signal.convolve(inputs[:,j],impact,mode="same")*0.03)
+
                 inputs = inputs.to(self.device).unsqueeze(1).transpose(0, 2)
 
                 try:

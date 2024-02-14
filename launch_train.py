@@ -33,7 +33,7 @@ def custom_collate(batch):
 start_time = datetime.now()
 torch.set_printoptions(precision=3)
 
-COUNT_DATA =11#random.randint(0,14)
+COUNT_DATA =14#random.randint(0,14)
 print("dataset:", COUNT_DATA)
 data_files = ["G:/SpeechDataset/train/split_files_all/output0.jsonl","G:/SpeechDataset/train/split_files_all/output1.jsonl",
               "G:/SpeechDataset/train/split_files_all/output2.jsonl","G:/SpeechDataset/train/split_files_all/output3.jsonl",
@@ -48,7 +48,7 @@ model = SpeechRecognition()
 
 
 losses = []
-for i in range(9,COUNT_DATA):
+for i in range(13,COUNT_DATA):
 
     train = WavDataSet(hard_path=data_files[i],type = "train")#,transform=[RandomOffset()])
     train_data = torch.utils.data.DataLoader(train,batch_size=32,collate_fn=custom_collate,shuffle=False)
