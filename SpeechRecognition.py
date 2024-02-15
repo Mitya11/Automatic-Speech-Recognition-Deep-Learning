@@ -63,14 +63,14 @@ class SpeechRecognition:
         for epoch in range(epochesCount):
             print("Epoch:", epoch + 1)
             it = iter(train_data)
-            criterion_cross = torch.nn.CrossEntropyLoss(ignore_index=34,label_smoothing=0.2)
+            criterion_cross = torch.nn.CrossEntropyLoss(ignore_index=34,label_smoothing=0.06)
             criterion_ctc = torch.nn.CTCLoss(blank=0, reduction='sum', zero_infinity=True)
             sr = 0
             for i in range(len(train_data)):
                 inputs, target, input_lengths, target_lengths = next(it)
 
                 for j in range(inputs.shape[1]):
-                    if random.randint(1, 100) < 70:
+                    if random.randint(1, 100) < 100:
                         inputs[:,j] = inputs[:,j]*0.97 + torch.tensor(scipy.signal.convolve(inputs[:,j],impact,mode="same")*0.03)
 
                 inputs = inputs.to(self.device).unsqueeze(1).transpose(0, 2)
@@ -97,7 +97,7 @@ class SpeechRecognition:
                 # CTC-based model
                 ctc_output = self.ctc_classifier(encoder_output)
                 input_lengths = input_lengths // 8
-                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0.000
+                loss = criterion_ctc(ctc_output.transpose(0, 1), target, input_lengths, target_lengths) * 0.005
 
                 # Attention-based model
                 prev_output = torch.zeros((encoder_output.shape[0])).to(self.device,torch.long)
